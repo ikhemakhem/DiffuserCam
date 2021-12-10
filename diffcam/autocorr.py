@@ -1,5 +1,5 @@
 import numpy as np
-from numpy.fft import fft2, ifft2
+from numpy.fft import fft2, ifft2, ifftshift
 from scipy.signal import correlate2d
 
 def autocorr2d(vals, pad_mode="reflect"):
@@ -18,7 +18,6 @@ def autocorr2d(vals, pad_mode="reflect"):
     autocorr : py:class:`~numpy.ndarray`
     """
 
-    vals = ifftshift((vals - np.average(vals))/np.std(vals))
     padded = np.pad(vals, ((int(vals.shape[0]/2), int(vals.shape[1]/2)),), mode=pad_mode)
     # padded = vals
     f = fft2(padded)
@@ -27,7 +26,7 @@ def autocorr2d(vals, pad_mode="reflect"):
     
 
     # return correlate2d(vals, vals, mode='same', boundary='fill')
-    return np.real(res)
+    return np.real(res)#[:n1//2, :n2//2]#/(np.arange(n1//2)[::-1]+n1//2)
 
 
 # def autocorrelation(vals):
