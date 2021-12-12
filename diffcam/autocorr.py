@@ -1,6 +1,5 @@
 import numpy as np
 from numpy.fft import fft2, ifft2, ifftshift
-from scipy.signal import correlate2d
 
 def autocorr2d(vals, pad_mode="reflect"):
     """
@@ -16,31 +15,21 @@ def autocorr2d(vals, pad_mode="reflect"):
     Return
     ------
     autocorr : py:class:`~numpy.ndarray`
+
+    Created on Sun Dec 12 18:13:00 2021
+
+    @author: ludvigdillen
     """
+    pad_width = int(vals.shape[0]/2)  # length of padding left/right of the 2-D array
+    pad_height = int(vals.shape[1]/2)  # length of padding top/bottom of the 2-D array
+    # The resulting 2-D array from this operation has twice the width and height compared
+    # with the input 2-Darray.
+    padded_vals = np.pad(vals, ((pad_width, pad_width),(pad_height,pad_height)), mode=pad_mode)
+    f = fft2(padded_vals)
+    l2norm = np.absolute(f)**2  # computing the autocorrelation in the Fourier domain
+    res = ifftshift(ifft2(l2norm), axes=None)  # ifftshift centrals the signal around zero
+    # Keep the samples around zero with the constraint that the output is of the same size as
+    # the input and that the autocorrelation is symmetric around 0.
+    res = res[pad_width:3*pad_width, pad_height:3*pad_height]
+    return np.real(res)
 
-    padded = np.pad(vals, ((int(vals.shape[0]/2), int(vals.shape[1]/2)),), mode=pad_mode)
-    # padded = vals
-    f = fft2(padded)
-    l2norm = np.absolute(f)**2
-    res = ifft2(l2norm)
-    
-
-    # return correlate2d(vals, vals, mode='same', boundary='fill')
-    return np.real(res)#[:n1//2, :n2//2]#/(np.arange(n1//2)[::-1]+n1//2)
-
-
-# def autocorrelation(vals):
-#     valsp = ifftshift((vals - np.average(vals))/np.std(vals))
-#     n, = valsp.shape
-#     valsp = np.r_[valsp[:n//2], np.zeros_like(valsp), valsp[n//2:]]
-#     f = fft(valsp)
-#     p = np.absolute(f)**2
-#     pi = ifft(p)
-#     return np.real(pi)[:n//2]/(np.arange(n//2)[::-1]+n//2)
-
-# def autocorrelation(vals) :
-#     # valsp = (vals - np.average(vals))/np.std(vals)
-#     f = fft2(valsp)
-#     p = np.absolute(f)**2
-#     pi = ifft2(p)
-#     return np.real(pi)[:int(valsp.shape[0]/2), :int(valsp.shape[1]/2)]/(len(valsp))
