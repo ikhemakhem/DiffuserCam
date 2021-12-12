@@ -17,8 +17,8 @@ from diffcam.io import load_data
 
 from pycsou.linop import Gradient
 from pycsou.opt import APGD
-from pycsou.func import SquaredL2Loss, SquaredL2Norm, Segment
-from pycsou.linop import Masking
+from pycsou.func import SquaredL2Loss, SquaredL2Norm, Segment, L1Norm, NonNegativeOrthant
+from pycsou.linop import Convolve2D
 
 @click.command()
 @click.option(
@@ -134,30 +134,40 @@ def reconstruction(
         save = plib.Path(__file__).parent / save
         save.mkdir(exist_ok=False)
 
+
+
+
     start_time = time.time()
     # TODO : setup for your reconstruction algorithm
-    # Gop is our mask (tape) described by our psf 
-    Gop = Masking(size=psf.size, sampling_bool=psf.flatten())
-    # Gop.compute_lipschitz_cst()
-    print(Gop)
+    # Gop is our mask (tape) described by our psf
+    Gop = Convolve2D(size=data.size,
+                      filter=psf, shape=data.shape)
+    Gop.compute_lipschitz_cst()
 
-    # D = Gradient(shape=data.shape)  # Regularisation operator (don't use)
-    # Compute approximate Lipschitz constant for auto-tuning of step size
-    # D.compute_lipschitz_cst(tol=1e-3)
+    varlambda = .005
+    loss = SquaredL2Loss(dim=data.size, data=data.flatten())
 
-    # mu = 0.1 * (Gop.lipschitz_cst ** 2 / D.lipschitz_cst ** 2)  # Penalty strength
-    varlambda = .05
-    F = ((1/2) * SquaredL2Loss(dim=data.size, data=data) * Gop) + (varlambda * SquaredL2Norm(dim=D.shape[0]) )#* D)
     # we should have F = 1/2 * ‖y − Hx‖ + λ‖x‖      with ‖.‖ squared L2 norm
+    ridgeF = ((1/2) * loss * Gop) + (varlambda * SquaredL2Norm(dim=data.size))
+    # lasso, same but l1 norm (non diffirentiable)
+    lassoF = ((1/2) * loss * Gop)
+    lassoG = varlambda * L1Norm(dim=data.size)
+    # non-negative least square, same but non-negativity prior (non diffirentiable)
+    nnF = lassoF
+    nnG = NonNegativeOrthant(dim=data.size) # varlambda should have no effect in this case
 
-    # G = Segment(dim=data.size, a=0, b=1) don't use anything for G
-    apgd = APGD(dim=data.size, F=F, G=None, verbose=None)  # Initialise APGD with only our functional F to minimize
+    # apgd = APGD(dim=data.size, F=ridgeF, G=None, verbose=None)  # Initialise APGD with only our functional F to minimize
+    # apgd = APGD(dim=data.size, F=lassoF, G=lassoG, verbose=None)  
+    apgd = APGD(dim=data.size, F=nnF, G=nnG, verbose=None)  
     print(f"setup time : {time.time() - start_time} s")
+
+
+
 
     start_time = time.time()
     # TODO : apply your reconstruction
-    out, _, _ = apgd.iterate() # Run APGD
-    tikhonov_estimate = out['iterand'].reshape(data.shape)
+    allout = apgd.iterate() # Run APGD
+    out, _, _ = allout
     plt.figure()
     print(f"proc time : {time.time() - start_time} s")
 
