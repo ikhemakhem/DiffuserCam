@@ -169,6 +169,8 @@ def reconstruction(
     allout = apgd.iterate() # Run APGD
     out, _, _ = allout
     plt.figure()
+    estimate = out['iterand'].reshape(data.shape)
+    plt.imshow(estimate)
     print(f"proc time : {time.time() - start_time} s")
 
     if not no_plot:
