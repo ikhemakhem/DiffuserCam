@@ -10,7 +10,8 @@ def autocorr2d(vals, pad_mode="reflect"):
     vals : py:class:`~numpy.ndarray`
         2-D image.
     pad_mode : str
-        Desired padding. See NumPy documentation: https://numpy.org/doc/stable/reference/generated/numpy.pad.html
+        Desired padding. See NumPy documentation:
+            https://numpy.org/doc/stable/reference/generated/numpy.pad.html
 
     Return
     ------
@@ -25,11 +26,12 @@ def autocorr2d(vals, pad_mode="reflect"):
     # The resulting 2-D array from this operation has twice the width and height compared
     # with the input 2-Darray.
     padded_vals = np.pad(vals, ((pad_width, pad_width),(pad_height,pad_height)), mode=pad_mode)
-    f = fft2(padded_vals)
-    l2norm = np.absolute(f)**2  # computing the autocorrelation in the Fourier domain
-    res = ifftshift(ifft2(l2norm), axes=None)  # ifftshift centrals the signal around zero
+    fourier_padded_vals = fft2(padded_vals)
+    # Computing the autocorrelation in the Fourier domain
+    fourier_auto_corr = np.absolute(fourier_padded_vals)**2
+     # ifftshift centrals the signal around zero
+    res = ifftshift(ifft2(fourier_auto_corr), axes=None)
     # Keep the samples around zero with the constraint that the output is of the same size as
     # the input and that the autocorrelation is symmetric around 0.
     res = res[pad_width:3*pad_width, pad_height:3*pad_height]
     return np.real(res)
-
