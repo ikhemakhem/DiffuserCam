@@ -24,6 +24,5 @@ class RepCol(LinearOperator):
 
     def adjoint(self, x: np.ndarray, my_type=2, my_s=None, my_axes=None, my_norm=None, \
         my_overwrite_x=False, my_workers=None) -> np.ndarray:
-
         return idctn(x, type=my_type, s=my_s, axes=my_axes, norm=my_norm, \
             overwrite_x=my_overwrite_x, workers=my_workers)
