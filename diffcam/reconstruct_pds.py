@@ -136,7 +136,7 @@ def reconstruction(
         save.mkdir(exist_ok=False)
 
 
-
+    print(psf.shape)
 
     start_time = time.time()
     # TODO : setup for your reconstruction algorithm
