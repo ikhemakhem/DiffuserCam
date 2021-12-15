@@ -6,7 +6,7 @@ def autocorr2d(vals, pad_mode="reflect"):
     Compute 2-D autocorrelation of image via the FFT.
 
     Parameters
-    ----------
+    ----------  
     vals : py:class:`~numpy.ndarray`
         2-D image.
     pad_mode : str
