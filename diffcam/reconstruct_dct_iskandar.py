@@ -2,25 +2,27 @@
 This script will load the PSF data and raw measurement for the reconstruction
 that can implement afterwards.
 ```bash
-python diffcam/reconstruct_huber.py --psf_fp data/psf/diffcam_rgb.png --data_fp data/raw_data/thumbs_up_rgb.png --gray
+python scripts/reconstruction_template.py --psf_fp data/psf/diffcam_rgb.png \
+--data_fp data/raw_data/thumbs_up_rgb.png
 ```
 """
 
 import os
 import time
 import pathlib as plib
-
-from numpy.core.numeric import identity
 import click
 import matplotlib.pyplot as plt
+import numpy as np
 from datetime import datetime
 from diffcam.io import load_data
+from dct_operator import DCT
 
+from scipy.fft import dctn, idctn
 
-from pycsou.opt import APGD, PrimalDualSplitting
-from pycsou.func import SquaredL2Loss, SquaredL2Norm, Segment, L1Norm, NonNegativeOrthant, DifferentiableFunctional
-from pycsou.linop import Convolve2D, Gradient, IdentityOperator
-import numpy as np
+from pycsou.core import LinearOperator
+from pycsou.opt import APGD
+from pycsou.func import SquaredL2Loss, SquaredL2Norm, Segment, L1Norm, NonNegativeOrthant
+from pycsou.linop import Convolve2D, Gradient
 
 @click.command()
 @click.option(
@@ -137,102 +139,58 @@ def reconstruction(
         save.mkdir(exist_ok=False)
 
 
+    class IDCT(LinearOperator):
+        def __call__(self, x: np.ndarray, my_type = 2, my_norm = 'ortho') -> np.ndarray:
+            return idctn(x, type=my_type, norm = my_norm)
+
+        def adjoint(self, y: np.ndarray, my_type = 2, my_norm = 'ortho') -> np.ndarray:
+            return dctn(y, type=my_type, norm = my_norm)
 
 
     start_time = time.time()
     # TODO : setup for your reconstruction algorithm
     # Gop is our mask (tape) described by our psf
-    print(psf.shape)
-    print(data.size)
-    class HuberNorm(DifferentiableFunctional):
-        def __init__(self, dim: int, delta: float):
-            super(HuberNorm, self).__init__(dim=dim, diff_lipschitz_cst=1)
-            self.delta = delta
-        def __call__(self, x: np.ndarray) -> float:
-            z = x
-            for i in range(z.size):
-                if abs(z[i]) <= self.delta:
-                    z[i] = 0.5*z[i]*z[i]
-                else:
-                    z[i] = self.delta*(abs(z)-self.delta/2) 
-            return np.sum(z)
-        
-        def jacobianT(self, x: np.ndarray) -> np.ndarray:
-            grad = np.empty_like(x)
-            for i in range(x.size):
-                if abs(x[i])<= self.delta:
-                    grad[i] = x[i]
-                elif x[i] > self.delta:
-                    grad[i] = self.delta
-                else:
-                    grad[i] = self.delta
-            return grad
-
-    lambda1 = 1
-    lambda2 = 10
-    print('lambda2: ', lambda2)
     Gop = Convolve2D(size=data.size, filter=psf, shape=data.shape)
     Gop.compute_lipschitz_cst()
     loss = SquaredL2Loss(dim=data.size, data=data.flatten())
-    F = ((1/2) * loss * Gop)
+    idct = IDCT(shape=[data.size,data.size])
+    idct.compute_lipschitz_cst()
+    F_func = (1/2) * loss * Gop * idct
 
-    G = lambda1*NonNegativeOrthant(dim=data.size)
-    #D = lambda1*FirstDerivative(size=data.size, kind='forward')
-    D = Gradient(shape=data.flatten().shape)
-    D.compute_lipschitz_cst()
 
-    huber_delta = 1.5
-    #huber = HuberNorm(dim = 1, delta = huber_delta)
-    H = lambda2 * HuberNorm(dim = data.size, delta = huber_delta)*D
-    #penalty = lambda2*H_norm(D)
+    varlambda = 0.00001
+    print('lambda',varlambda)
 
-    K = IdentityOperator(data.size)
-
-    print('data', data.shape)
-    print('Gop', Gop.shape)
-    print('D', D.shape)
-    print('F', F.shape)
-    print('G', G.shape)
-    print('H', H.shape)
-
-    #pds = PDS(dim=data.size, F=F, G=G, H=H, K=D, verbose=None)
-    pds = PrimalDualSplitting(dim=Gop.shape[1], F=F+H, G=0.5*G, H=0.5*G, K=K, verbose=None)  # Initialise PDS
-    print(f"setup time : {time.time() - start_time} s")
-
-    ##
-    # Gop = Convolve2D(size=data.size,
-    #                   filter=psf, shape=data.shape)
-    # Gop.compute_lipschitz_cst()
-    # loss = SquaredL2Loss(dim=data.size, data=data.flatten())
-    # D = Gradient(shape=data.shape) #FirstDerivative?
-    # D.compute_lipschitz_cst()
-    # mu = 0.035 * np.max(D(Gop.adjoint(data.flatten()))) # Penalty strength
-
-    # F = ((1/2) * loss * Gop)
-    # G = NonNegativeOrthant(dim=data.size)
-    # H = mu * L1Norm(dim=D.shape[0])
-
-    # print('data', data.shape)
-    # print('Gop', Gop.shape)
-    # print('D', D.shape)
-    # print('F', F.shape)
-    # print('G', G.shape)
-    # print('H', H.shape)
+    lassoG = varlambda * L1Norm(dim=data.size)
+    ####################### Question5 DCT - in progress
     
-    # pds = PDS(dim=data.size, F=F, G=G, H=H, K=D, verbose=None)  # Initialise PDS
+    print("Gop", Gop.shape)
+    print("loss", loss.shape)
+    print("F",F_func.shape)
+    print("IDCT", idct.shape)
+    print("lassoG", lassoG.shape)
+
+    apgd = APGD(dim=data.size, F=F_func, G=lassoG, verbose=None) # question 5 DCT
+    ####################
+    # apgd = APGD(dim=data.size, F=ridgeF, G=None, verbose=None)  # Initialise APGD with only our functional F to minimize
+    # apgd = APGD(dim=data.size, F=lassoF, G=lassoG, verbose=None)  
+    # apgd = APGD(dim=data.size, F=nnF, G=nnG, verbose=None)
     print(f"setup time : {time.time() - start_time} s")
-
-
 
 
     start_time = time.time()
     # TODO : apply your reconstruction
-    allout = pds.iterate() # Run APGD
+    allout = apgd.iterate() # Run APGD
     out, _, _ = allout
     plt.figure()
-    estimate = out['primal_variable'].reshape(data.shape)
+    print('out',type(out['iterand']))
+    
+    estimate = idct.adjoint(out['iterand']).reshape(data.shape)
+    print('estimate',estimate.shape)
+    
     plt.imshow(estimate)
     print(f"proc time : {time.time() - start_time} s")
+
 
     if not no_plot:
         plt.show()
