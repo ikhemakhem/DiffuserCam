@@ -157,17 +157,6 @@ def reconstruction(
     # non-negative least square, same but non-negativity prior (non diffirentiable)
     nnF = lassoF
     nnG = NonNegativeOrthant(dim=data.size) # varlambda should have no effect in this case
-    ####################### Question5 DCT - in progress
-    print("DCT", DCT(size = data.size).shape) 
-    print("loss", loss.shape)
-    print("Gop", Gop.shape)
-    print("IDCT", DCT(size = data.size).adjoint(data.flatten(), my_type = 2, my_norm="ortho").reshape(data.size, 1).shape)
-
-    lassoF_IDCT = ((1/2) * loss * Gop * \
-        DCT(size = data.size).adjoint(data.flatten(), my_type = 2, my_norm="ortho").reshape(data.size, 1))
-    # lassoG_DCT = varlambda * L1Norm(dim=data.size) * DCT(size = data.size)
-    # print("lassoG_DCT", lassoG_DCT.shape)
-    apgd = APGD(dim=data.size, F=lassoF_IDCT, G=lassoG, verbose=None) # question 5 DCT
     ####################
     # apgd = APGD(dim=data.size, F=ridgeF, G=None, verbose=None)  # Initialise APGD with only our functional F to minimize
     # apgd = APGD(dim=data.size, F=lassoF, G=lassoG, verbose=None)  
