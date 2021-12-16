@@ -98,6 +98,31 @@ from pycsou.linop import Convolve2D, Gradient
     is_flag=True,
     help="Same PSF for all channels (sum) or unique PSF for RGB.",
 )
+
+class DCT(LinearOperator):
+    """
+    Linear operator for the DCT (Discrete Fourier Transform) and its adjoint, the IDCT
+    (Inverse Discrete Fourier Transform). This implemenation supports the multidimensional
+    DCT.
+    """
+    def __call__(self, x: np.ndarray, my_type = 2, my_norm = 'ortho') -> np.ndarray:
+        return dctn(x, type=my_type, norm = my_norm)
+
+    def adjoint(self, y: np.ndarray, my_type = 2, my_norm = 'ortho') -> np.ndarray:
+        return idctn(y, type=my_type, norm = my_norm)
+
+class IDCT(LinearOperator):
+    """
+    Linear operator for the IDCT (Inverse Discrete Fourier Transform) and its adjoint, the DCT
+    (Discrete Fourier Transform). This implemenation supports the multidimensional
+    IDCT.
+    """
+    def __call__(self, x: np.ndarray, my_type = 2, my_norm = 'ortho') -> np.ndarray:
+        return idctn(x, type=my_type, norm = my_norm)
+
+    def adjoint(self, y: np.ndarray, my_type = 2, my_norm = 'ortho') -> np.ndarray:
+        return dctn(y, type=my_type, norm = my_norm)
+
 def reconstruction(
     psf_fp,
     data_fp,
@@ -136,32 +161,6 @@ def reconstruction(
         save = "YOUR_RECONSTRUCTION_" + save + timestamp
         save = plib.Path(__file__).parent / save
         save.mkdir(exist_ok=False)
-
-    class DCT(LinearOperator):
-        """
-        Linear operator for the DCT (Discrete Fourier Transform) and its adjoint, the IDCT
-        (Inverse Discrete Fourier Transform). This implemenation supports the multidimensional
-        DCT.
-        """
-        def __call__(self, x: np.ndarray, my_type = 2, my_norm = 'ortho') -> np.ndarray:
-            return dctn(x, type=my_type, norm = my_norm)
-
-        def adjoint(self, y: np.ndarray, my_type = 2, my_norm = 'ortho') -> np.ndarray:
-            return idctn(y, type=my_type, norm = my_norm)
-
-
-    class IDCT(LinearOperator):
-        """
-        Linear operator for the IDCT (Inverse Discrete Fourier Transform) and its adjoint, the DCT
-        (Discrete Fourier Transform). This implemenation supports the multidimensional
-        IDCT.
-        """
-        def __call__(self, x: np.ndarray, my_type = 2, my_norm = 'ortho') -> np.ndarray:
-            return idctn(x, type=my_type, norm = my_norm)
-
-        def adjoint(self, y: np.ndarray, my_type = 2, my_norm = 'ortho') -> np.ndarray:
-            return dctn(y, type=my_type, norm = my_norm)
-
 
     start_time = time.time()
     # TODO : setup for your reconstruction algorithm
