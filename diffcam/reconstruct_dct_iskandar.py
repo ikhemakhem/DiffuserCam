@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime
 from diffcam.io import load_data
-from dct_operator import DCT
+# from dct_operator import DCT
 
 from scipy.fft import dctn, idctn
 
@@ -138,8 +138,25 @@ def reconstruction(
         save = plib.Path(__file__).parent / save
         save.mkdir(exist_ok=False)
 
+    class DCT(LinearOperator):
+        """
+        Linear operator for the DCT (Discrete Fourier Transform) and its adjoint, the IDCT
+        (Inverse Discrete Fourier Transform). This implemenation supports the multidimensional
+        DCT.
+        """
+        def __call__(self, x: np.ndarray, my_type = 2, my_norm = 'ortho') -> np.ndarray:
+            return dctn(x, type=my_type, norm = my_norm)
+
+        def adjoint(self, y: np.ndarray, my_type = 2, my_norm = 'ortho') -> np.ndarray:
+            return idctn(y, type=my_type, norm = my_norm)
+
 
     class IDCT(LinearOperator):
+        """
+        Linear operator for the IDCT (Inverse Discrete Fourier Transform) and its adjoint, the DCT
+        (Discrete Fourier Transform). This implemenation supports the multidimensional
+        IDCT.
+        """
         def __call__(self, x: np.ndarray, my_type = 2, my_norm = 'ortho') -> np.ndarray:
             return idctn(x, type=my_type, norm = my_norm)
 
