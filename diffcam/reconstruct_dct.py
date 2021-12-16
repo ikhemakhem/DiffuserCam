@@ -15,7 +15,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime
 from diffcam.io import load_data
-# from dct_operator import DCT
 
 from scipy.fft import dctn, idctn
 
