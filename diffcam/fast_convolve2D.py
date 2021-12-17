@@ -7,9 +7,6 @@ python scripts/reconstruction_template.py --psf_fp data/psf/diffcam_rgb.png \
 ```
 """
 
-
-
-
 import os
 import time
 import pathlib as plib
@@ -19,7 +16,7 @@ import numpy as np
 from datetime import datetime
 from diffcam.io import load_data
 
-from scipy.fft import rfft2, irfft2, ifftshift, dctn, idctn
+from scipy.fft import rfft2, irfft2, ifftshift 
 import reconstruct_dct
 
 from pycsou.core import LinearOperator
@@ -149,6 +146,7 @@ def reconstruction(
     class pylopsFastConvolveND(LinearOperator):
         def __init__(self, N, h, dims, fft_filter, offset=None, dirs=None,
                     method='fft', dtype='float64'):
+            # print("in pylopsFastConvolveND")
             ncp = get_array_module(h)
             self.h = h
             self.nh = np.array(self.h.shape)
@@ -185,16 +183,20 @@ def reconstruction(
             else:
                 self.dims = np.array(dims)
                 self.reshape = True
-
             # convolve and correate functions
             self.convolve = get_convolve(h)
             self.correlate = get_correlate(h)
             self.method = method
-            self.fft = fft_filter
 
             self.shape = (np.prod(self.dims), np.prod(self.dims))
             self.dtype = np.dtype(dtype)
             self.explicit = False
+
+            # extra for the fft_filter
+            self.fft = fft_filter
+            # self.pad_matrix = np.zeros((2*fft_filter.shape), dtype=float)
+
+            
 
         def _matvec(self, x):
             # correct type of h if different from x and choose methods accordingly
@@ -203,8 +205,15 @@ def reconstruction(
                 self.convolve = get_convolve(self.h)
                 self.correlate = get_correlate(self.h)
             x = np.reshape(x, self.dims)
-            y = ifftshift(irfft2(self.fft * rfft2(x, axes=(0, 1)), axes=(0, 1),),axes=(0, 1),)
-            # y = self.convolve(x, self.h, mode='same', method=self.method)
+            pad_width = int(x.shape[0]/2)  # length of padding left/right of the 2-D array
+            pad_height = int(x.shape[1]/2)  # length of padding top/bottom of the 2-D array
+            padded_x = np.pad(x, ((pad_width, pad_width),(pad_height,pad_height)), mode="reflect")
+            y = ifftshift(irfft2(self.fft * rfft2(padded_x, axes=(0, 1)), axes=(0, 1),),axes=(0, 1),)
+            # y = ifftshift(irfft2(self.fft * rfft2(padded_x, axes=None), axes=None,),axes=None,)
+            cut_sample_w = int((pad_width+self.fft.shape[0]/4)/2)   
+            cut_sample_h = int((pad_height+self.fft.shape[1]/2)/2)
+            y = y[cut_sample_w:3*cut_sample_w, cut_sample_h:3*cut_sample_h]
+            # y = self.convolve(x, self.h, mode='same', method=self.method) # it was this before
             y = y.ravel()
             return y
 
@@ -215,12 +224,21 @@ def reconstruction(
                 self.convolve = get_convolve(self.h)
                 self.correlate = get_correlate(self.h)
             x = np.reshape(x, self.dims)
-            y = self.correlate(x, self.h, mode='same', method=self.method)
+            pad_width = int(x.shape[0]/2)  # length of padding left/right of the 2-D array
+            pad_height = int(x.shape[1]/2)  # length of padding top/bottom of the 2-D array
+            padded_x = np.pad(x, ((pad_width, pad_width),(pad_height,pad_height)), mode="reflect")
+            y = ifftshift(irfft2(self.fft * np.conj(rfft2(padded_x, axes=(0, 1))), axes=(0, 1)),axes=(0, 1),)
+            # y = ifftshift(irfft2(self.fft * np.conj(rfft2(padded_x, axes=None)), axes=None),axes=None,)
+            cut_sample_w = int((pad_width+self.fft.shape[0]/4)/2)
+            cut_sample_h = int((pad_height+self.fft.shape[1]/2)/2)
+            y = y[cut_sample_w:3*cut_sample_w, cut_sample_h:3*cut_sample_h]
+            #y = self.correlate(x, self.h, mode='same', method=self.method) # it was this before
             y = y.ravel()
             return y
     
     def pylopsConvolve2D(N, h, dims, fft_filterP2D, offset=(0, 0), nodir=None, dtype='float64',
                method='fft'):
+        # print("in pylopsConvolve2D")
         if h.ndim != 2:
             raise ValueError('h must be 2-dimensional')
         if nodir is None:
@@ -238,6 +256,7 @@ def reconstruction(
 
     def FastConvolve2D(size: int, filter: np.ndarray, shape: tuple, fft_filterFC2: np.ndarray,
                        dtype: type = 'float64', method: str = 'fft') -> PyLopLinearOperator:
+        # print("in FastConvolve2D")
         if (filter.shape[0] % 2) == 0:
             offset0 = filter.shape[0] // 2 - 1
         else:
@@ -250,83 +269,72 @@ def reconstruction(
         PyLop = pylopsConvolve2D(N=size, h=filter, dims=shape, fft_filterP2D = fft_filterFC2,
                                  nodir=None, dtype=dtype, method=method, offset=offset)
         return PyLopLinearOperator(PyLop)
-    
-    # class IDCT(LinearOperator):
-    #     """
-    #     Linear operator for the IDCT (Inverse Discrete Fourier Transform) and its adjoint, the DCT
-    #     (Discrete Fourier Transform). This implemenation supports the multidimensional
-    #     IDCT.
-    #     """
-    #     def __call__(self, x: np.ndarray, my_type = 2, my_norm = 'ortho') -> np.ndarray:
-    #         return idctn(x, type=my_type, norm = my_norm)
-
-    #     def adjoint(self, y: np.ndarray, my_type = 2, my_norm = 'ortho') -> np.ndarray:
-    #         return dctn(y, type=my_type, norm = my_norm)
 
     if np.isreal(psf.all()):
         print("the psf is real")
     else:
         print("Not real")
-    fft_psf = rfft2(psf, axes=(0, 1))
-
-    start_time = time.time()
-    # TODO : setup for your reconstruction algorithm
-    # Gop is our mask (tape) described by our psf
+    print("shape psf before", psf.shape)
+    pad_width = int(psf.shape[0]/2)  # length of padding left/right of the 2-D array
+    pad_height = int(psf.shape[1]/2)  # length of padding top/bottom of the 2-D array
+    padded_psf = np.pad(psf, ((pad_width, pad_width),(pad_height,pad_height)), mode="reflect")
+    print("shape psf after padding", padded_psf.shape)
+    fft_psf = rfft2(padded_psf, axes=(0, 1))
     varlambda = 0.00001
     print('lambda',varlambda)
+    N = 1
 
-    for J in range(1000):
-        Gop = Convolve2D(size=data.size,
-                          filter=psf, shape=data.shape)
-        # Gop.compute_lipschitz_cst()
-        # loss = SquaredL2Loss(dim=data.size, data=data.flatten())
-        # idct = reconstruct_dct.IDCT(shape=[data.size,data.size])
-        # # idct.compute_lipschitz_cst()
-        # F_func = (1/2) * loss * Gop * idct
-        # lassoG = varlambda * L1Norm(dim=data.size)
-        # apgd = APGD(dim=data.size, F=F_func, G=lassoG, verbose=None)
+    # Gop = Convolve2D(size=data.size,
+    #                     filter=psf, shape=data.shape)
+    # start_time = time.time()
+    # for _ in range(N):
+    #     Gop.compute_lipschitz_cst()
+    #     loss = SquaredL2Loss(dim=data.size, data=data.flatten())
+    #     idct = reconstruct_dct.IDCT(shape=[data.size,data.size])
+    #     idct.compute_lipschitz_cst()
+    #     F_func = (1/2) * loss * Gop * idct
+    #     lassoG = varlambda * L1Norm(dim=data.size)
+    #     apgd = APGD(dim=data.size, F=F_func, G=lassoG, verbose=None, max_iter=200)
         
-        # allout = apgd.iterate() # Run APGD
-        # out, _, _ = allout
-        # plt.figure()
-        # print('out',type(out['iterand']))
-        # estimate = idct.adjoint(out['iterand']).reshape(data.shape)
-        # print('estimate',estimate.shape)
-        # plt.imshow(estimate)
-        # print(f"proc time : {time.time() - start_time} s")
-        # if not no_plot:
-        #     plt.show()
-        # if save:
-        #     print(f"Files saved to : {save}")
-
-    print(f"Time for Convolve2D : {time.time() - start_time} s")
+    #     allout = apgd.iterate() # Run APGD
+    #     out, _, _ = allout
+    #     plt.figure()
+    #     print('out',type(out['iterand']))
+    #     estimate = idct(out['iterand']).reshape(data.shape)
+    #     print('estimate',estimate.shape)
+    #     plt.imshow(estimate)
+    #     print(f"proc time : {time.time() - start_time} s")
+    #     if not no_plot:
+    #         plt.show()
+    #     if save:
+    #         print(f"Files saved to : {save}")
+    # print(f"Time for Convolve2D : {time.time() - start_time} s")
+    print("Now we start")
+    Gop = FastConvolve2D(size=data.size, filter=psf,
+                         shape=data.shape, fft_filterFC2 = fft_psf)
     start_time = time.time()
-    for I in range(1000):
-        Gop = FastConvolve2D(size=data.size, filter=psf,
-                             shape=data.shape, fft_filterFC2 = fft_psf)
-        # Gop.compute_lipschitz_cst()
-        # loss = SquaredL2Loss(dim=data.size, data=data.flatten())
-        # idct = reconstruct_dct.IDCT(shape=[data.size,data.size])
-        # # idct.compute_lipschitz_cst()
-        # F_func = (1/2) * loss * Gop * idct
-        # lassoG = varlambda * L1Norm(dim=data.size)
-        # apgd = APGD(dim=data.size, F=F_func, G=lassoG, verbose=None)
-
-        # allout = apgd.iterate() # Run APGD
-        # out, _, _ = allout
-        # plt.figure()
-        # print('out',type(out['iterand']))
-        # estimate = idct.adjoint(out['iterand']).reshape(data.shape)
-        # print('estimate',estimate.shape)
-        # plt.imshow(estimate)
-        # print(f"proc time : {time.time() - start_time} s")
-        # if not no_plot:
-        #     plt.show()
-        # if save:
-        #     print(f"Files saved to : {save}")
+    for _ in range(N):
+        Gop.compute_lipschitz_cst()
+        loss = SquaredL2Loss(dim=data.size, data=data.flatten())
+        idct = reconstruct_dct.IDCT(shape=[data.size,data.size])
+        idct.compute_lipschitz_cst()
+        F_func = (1/2) * loss * Gop * idct
+        lassoG = varlambda * L1Norm(dim=data.size)
+        apgd = APGD(dim=data.size, F=F_func, G=lassoG, verbose=None, max_iter=200)
+        
+        allout = apgd.iterate() # Run APGD
+        out, _, _ = allout
+        plt.figure()
+        print('out',type(out['iterand']))
+        estimate = idct(out['iterand']).reshape(data.shape)
+        print('estimate',estimate.shape)
+        plt.imshow(estimate)
+        print(f"proc time : {time.time() - start_time} s")
+        if not no_plot:
+            plt.show()
+        if save:
+            print(f"Files saved to : {save}")
     print(f"Time for FastConvolve2D: {time.time() - start_time} s")
-
-
-
+    
 if __name__ == "__main__":
     reconstruction()
