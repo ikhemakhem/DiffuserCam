@@ -4,6 +4,9 @@ import pathlib as plib
 import matplotlib.pyplot as plt
 from scipy.fftpack import next_fast_len
 from diffcam.plot import plot_image
+from pycsou.linop import Gradient, Convolve2D
+from pycsou.opt import APGD, PDS
+from pycsou.func import SquaredL2Loss, SquaredL2Norm, Segment, L1Norm, NonNegativeOrthant
 
 
 class ReconstructionAlgorithm(abc.ABC):
@@ -105,3 +108,78 @@ class ReconstructionAlgorithm(abc.ABC):
             return final_im, ax
         else:
             return final_im
+
+
+
+
+def get_solver(data, psf, mode, Gop, loss, varlambda=.005, acceleration='CD'):
+    apdg_modes = ['ridge', 'lasso', 'nn']
+    pds_modes = ['nnL1']
+
+    Gop.compute_lipschitz_cst()
+    # we should have F = 1/2 * ‖y − Hx‖ + λ‖x‖      with ‖.‖ squared L2 norm
+    ridgeF = ((1/2) * loss * Gop) + (varlambda * SquaredL2Norm(dim=data.size))
+    # lasso, same but l1 norm (non diffirentiable)
+    lassoF = ((1/2) * loss * Gop)
+    lassoG = varlambda * L1Norm(dim=data.size)
+    # non-negative least square, same but non-negativity prior (non diffirentiable)
+    nnF = lassoF
+    nnG = NonNegativeOrthant(dim=data.size) # varlambda should have no effect in this case
+
+    # whatever the pds one was called
+    pdsD = Gradient(shape=data.shape)
+    pdsD.compute_lipschitz_cst()
+    mu = 0.035 * np.max(pdsD(Gop.adjoint(data.flatten()))) # Penalty strength
+
+    pdsF = ((1/2) * loss * Gop)
+    pdsG = NonNegativeOrthant(dim=data.size)
+    pdsH = mu * L1Norm(dim=pdsD.shape[0])
+
+    if mode == 'ridge':
+        solver = APGD(dim=data.size, F=ridgeF, G=None, verbose=None, acceleration=acceleration)  # Initialise APGD with only our functional F to minimize
+    elif mode == 'lasso':
+        solver = APGD(dim=data.size, F=lassoF, G=lassoG, verbose=None, acceleration=acceleration) 
+    elif mode == 'nn':
+        solver = APGD(dim=data.size, F=nnF, G=nnG, verbose=None, acceleration=acceleration)
+    elif mode == pds_modes[0]:
+        solver = PDS(dim=data.size, F=pdsF, G=pdsG, H=pdsH, K=pdsD, verbose=None)
+    else:
+        raise Exception(str(mode) + ' mode not found.')
+
+
+    if mode in apdg_modes:
+        solver.get_estimate = lambda : solver.iterand['iterand'].reshape(data.shape)
+    else:
+        solver.get_estimate = lambda : solver.iterand['primal_variable'].reshape(data.shape)
+
+
+    return solver
+
+
+class Recon():
+    def __init__(self, data, psf, mode, varlambda=.005, color=True):
+        assert color #this was not a question.
+        data = {'r': data[:,:,0], 'g': data[:,:,1], 'b': data[:,:,2]}
+        psf = {'r': psf[:,:,0], 'g': psf[:,:,1], 'b': psf[:,:,2]}
+
+        Gop = {key: Convolve2D(size=data[key].size, filter=psf[key], shape=data[key].shape) for key in psf}
+        loss = SquaredL2Loss(dim=data['r'].size, data=data['r'].flatten())
+
+        self.solver = {key: get_solver(data[key], psf[key], mode, Gop[key], loss, varlambda) for key in data}
+
+
+    def iterate(self):
+        out = []
+        for key in self.solver:
+            out.append(self.solver[key].iterate())
+            plt.imshow(self.solver[key].get_estimate())
+
+        return out
+
+    def get_estimate(self):
+        estimate = np.array([self.solver[key].get_estimate() for key in self.solver])
+        to_return = np.empty((estimate.shape[1], estimate.shape[2], estimate.shape[0]))
+        to_return[:,:,0] = estimate[0]
+        to_return[:,:,1] = estimate[1]
+        to_return[:,:,2] = estimate[2]
+        return to_return
