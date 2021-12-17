@@ -161,18 +161,22 @@ class Recon():
         assert color #this was not a question.
         data = {'r': data[:,:,0], 'g': data[:,:,1], 'b': data[:,:,2]}
         psf = {'r': psf[:,:,0], 'g': psf[:,:,1], 'b': psf[:,:,2]}
+        to_save = np.array(list(data.values()))
+        print('to_save', to_save.shape)
+        np.save('semi-transposed_data.npy', to_save)
+        print('pls')
 
         Gop = {key: Convolve2D(size=data[key].size, filter=psf[key], shape=data[key].shape) for key in psf}
-        loss = SquaredL2Loss(dim=data['r'].size, data=data['r'].flatten())
+        loss = {key: SquaredL2Loss(dim=data[key].size, data=data[key].flatten()) for key in data}
 
-        self.solver = {key: get_solver(data[key], psf[key], mode, Gop[key], loss, varlambda) for key in data}
+        self.solver = {key: get_solver(data[key], psf[key], mode, Gop[key], loss[key], varlambda) for key in data}
 
 
     def iterate(self):
         out = []
         for key in self.solver:
             out.append(self.solver[key].iterate())
-            plt.imshow(self.solver[key].get_estimate())
+            np.save(key+'estimate.npy', self.solver[key].get_estimate())
 
         return out
 

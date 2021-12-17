@@ -135,3 +135,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Adrien's scratch files
+rgb_estimate.npy
+test.ipynb

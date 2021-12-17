@@ -20,6 +20,8 @@ from pycsou.linop import Gradient
 from pycsou.opt import APGD
 from pycsou.func import SquaredL2Loss, SquaredL2Norm, Segment, L1Norm, NonNegativeOrthant
 from pycsou.linop import Convolve2D
+from recon import Recon
+from plot import plot_image
 
 @click.command()
 @click.option(
@@ -141,25 +143,26 @@ def reconstruction(
     start_time = time.time()
     # TODO : setup for your reconstruction algorithm
     # Gop is our mask (tape) described by our psf
-    Gop = Convolve2D(size=data.size,
-                      filter=psf, shape=data.shape)
-    Gop.compute_lipschitz_cst()
+    # Gop = Convolve2D(size=data.size,
+    #                   filter=psf, shape=data.shape)
+    # Gop.compute_lipschitz_cst()
 
-    varlambda = .005
-    loss = SquaredL2Loss(dim=data.size, data=data.flatten())
+    # varlambda = .005
+    # loss = SquaredL2Loss(dim=data.size, data=data.flatten())
 
-    # we should have F = 1/2 * ‖y − Hx‖ + λ‖x‖      with ‖.‖ squared L2 norm
-    ridgeF = ((1/2) * loss * Gop) + (varlambda * SquaredL2Norm(dim=data.size))
-    # lasso, same but l1 norm (non diffirentiable)
-    lassoF = ((1/2) * loss * Gop)
-    lassoG = varlambda * L1Norm(dim=data.size)
-    # non-negative least square, same but non-negativity prior (non diffirentiable)
-    nnF = lassoF
-    nnG = NonNegativeOrthant(dim=data.size) # varlambda should have no effect in this case
+    # # we should have F = 1/2 * ‖y − Hx‖ + λ‖x‖      with ‖.‖ squared L2 norm
+    # ridgeF = ((1/2) * loss * Gop) + (varlambda * SquaredL2Norm(dim=data.size))
+    # # lasso, same but l1 norm (non diffirentiable)
+    # lassoF = ((1/2) * loss * Gop)
+    # lassoG = varlambda * L1Norm(dim=data.size)
+    # # non-negative least square, same but non-negativity prior (non diffirentiable)
+    # nnF = lassoF
+    # nnG = NonNegativeOrthant(dim=data.size) # varlambda should have no effect in this case
     ####################
     # apgd = APGD(dim=data.size, F=ridgeF, G=None, verbose=None)  # Initialise APGD with only our functional F to minimize
     # apgd = APGD(dim=data.size, F=lassoF, G=lassoG, verbose=None)  
     # apgd = APGD(dim=data.size, F=nnF, G=nnG, verbose=None)
+    solver = Recon(data, psf, mode='ridge')
     print(f"setup time : {time.time() - start_time} s")
 
 
@@ -170,11 +173,11 @@ def reconstruction(
 
     start_time = time.time()
     # TODO : apply your reconstruction
-    allout = apgd.iterate() # Run APGD
-    out, _, _ = allout
+    allout = solver.iterate() # Run APGD
     plt.figure()
-    estimate = out['iterand'].reshape(data.shape)
-    plt.imshow(estimate)
+    estimate = solver.get_estimate()
+    np.save('rgb_estimate.npy', estimate)
+    plot_image(estimate)
     print(f"proc time : {time.time() - start_time} s")
 
     if not no_plot:
