@@ -16,10 +16,6 @@ def autocorr2d(vals, pad_mode="reflect"):
     Return
     ------
     autocorr : py:class:`~numpy.ndarray`
-
-    Created on Sun Dec 12 18:13:00 2021
-
-    @author: ludvigdillen
     """
     pad_width = int(vals.shape[0]/2)  # length of padding left/right of the 2-D array
     pad_height = int(vals.shape[1]/2)  # length of padding top/bottom of the 2-D array
