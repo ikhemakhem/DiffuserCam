@@ -123,7 +123,7 @@ class IDCT(LinearOperator):
     def adjoint(self, y: np.ndarray, my_type = 2, my_norm = 'ortho') -> np.ndarray:
         return dctn(y, type=my_type, norm = my_norm)
 
-def reconstruction(
+def reconstruction_dct(
     psf_fp,
     data_fp,
     n_iter,
@@ -186,10 +186,7 @@ def reconstruction(
     print("lassoG", lassoG.shape)
 
     apgd = APGD(dim=data.size, F=F_func, G=lassoG, verbose=None) # question 5 DCT
-    ####################
-    # apgd = APGD(dim=data.size, F=ridgeF, G=None, verbose=None)  # Initialise APGD with only our functional F to minimize
-    # apgd = APGD(dim=data.size, F=lassoF, G=lassoG, verbose=None)  
-    # apgd = APGD(dim=data.size, F=nnF, G=nnG, verbose=None)
+   
     print(f"setup time : {time.time() - start_time} s")
 
 
@@ -200,7 +197,7 @@ def reconstruction(
     plt.figure()
     print('out',type(out['iterand']))
     
-    estimate = idct.adjoint(out['iterand']).reshape(data.shape)
+    estimate = idct(out['iterand']).reshape(data.shape)
     print('estimate',estimate.shape)
     
     plt.imshow(estimate)
@@ -214,4 +211,4 @@ def reconstruction(
 
 
 if __name__ == "__main__":
-    reconstruction()
+    reconstruction_dct()

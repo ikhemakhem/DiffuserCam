@@ -97,6 +97,30 @@ import numpy as np
     is_flag=True,
     help="Same PSF for all channels (sum) or unique PSF for RGB.",
 )
+class HuberNorm(DifferentiableFunctional):
+    def __init__(self, dim: int, delta: float):
+        super(HuberNorm, self).__init__(dim=dim, diff_lipschitz_cst=1)
+        self.delta = delta
+    def __call__(self, x: np.ndarray) -> float:
+        z = x
+        for i in range(z.size):
+            if abs(z[i]) <= self.delta:
+                z[i] = 0.5*z[i]*z[i]
+            else:
+                z[i] = self.delta*(abs(z)-self.delta/2) 
+        return np.sum(z)
+    
+    def jacobianT(self, x: np.ndarray) -> np.ndarray:
+        grad = np.empty_like(x)
+        for i in range(x.size):
+            if abs(x[i])<= self.delta:
+                grad[i] = x[i]
+            elif x[i] > self.delta:
+                grad[i] = self.delta
+            else:
+                grad[i] = self.delta
+        return grad
+
 def reconstruction(
     psf_fp,
     data_fp,
@@ -135,38 +159,12 @@ def reconstruction(
         save = "YOUR_RECONSTRUCTION_" + save + timestamp
         save = plib.Path(__file__).parent / save
         save.mkdir(exist_ok=False)
-
-
-
-
+    
     start_time = time.time()
     # TODO : setup for your reconstruction algorithm
     # Gop is our mask (tape) described by our psf
     print(psf.shape)
     print(data.size)
-    class HuberNorm(DifferentiableFunctional):
-        def __init__(self, dim: int, delta: float):
-            super(HuberNorm, self).__init__(dim=dim, diff_lipschitz_cst=1)
-            self.delta = delta
-        def __call__(self, x: np.ndarray) -> float:
-            z = x
-            for i in range(z.size):
-                if abs(z[i]) <= self.delta:
-                    z[i] = 0.5*z[i]*z[i]
-                else:
-                    z[i] = self.delta*(abs(z)-self.delta/2) 
-            return np.sum(z)
-        
-        def jacobianT(self, x: np.ndarray) -> np.ndarray:
-            grad = np.empty_like(x)
-            for i in range(x.size):
-                if abs(x[i])<= self.delta:
-                    grad[i] = x[i]
-                elif x[i] > self.delta:
-                    grad[i] = self.delta
-                else:
-                    grad[i] = self.delta
-            return grad
 
     lambda1 = 1
     lambda2 = 10

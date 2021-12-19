@@ -109,9 +109,6 @@ class ReconstructionAlgorithm(abc.ABC):
         else:
             return final_im
 
-
-
-
 def get_solver(data, psf, mode, Gop, loss, varlambda=.005, acceleration='CD'):
     apdg_modes = ['ridge', 'lasso', 'nn']
     pds_modes = ['nnL1']
@@ -154,7 +151,6 @@ def get_solver(data, psf, mode, Gop, loss, varlambda=.005, acceleration='CD'):
 
 
     return solver
-
 
 class Recon():
     def __init__(self, data, psf, mode, varlambda=.005, color=True):
