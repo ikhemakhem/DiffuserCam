@@ -17,7 +17,7 @@ from datetime import datetime
 from diffcam.io import load_data
 
 from scipy.fft import rfft2, irfft2, ifftshift 
-import reconstruct_dct
+# import reconstruct_dct
 
 from pycsou.core import LinearOperator
 from pycsou.opt import APGD
@@ -173,140 +173,139 @@ def reconstruction(
         save = plib.Path(__file__).parent / save
         save.mkdir(exist_ok=False)
 
+    # varlambda = 0.00001
+    # print("Now we start")
+    # start_time = time.time()
+    # Gop = FastConvolve2D(size=data.size, filter=psf, shape=data.shape)
+    # # an example of implementation using the FastConvolve2D
+    # Gop.compute_lipschitz_cst()
+    # loss = SquaredL2Loss(dim=data.size, data=data.flatten())
+    # idct = reconstruct_dct.IDCT(shape=[data.size,data.size])
+    # idct.compute_lipschitz_cst()
+    # F_func = (1/2) * loss * Gop * idct
+    # lassoG = varlambda * L1Norm(dim=data.size)
+    # apgd = APGD(dim=data.size, F=F_func, G=lassoG, verbose=None, max_iter=10)
+    
+    # allout = apgd.iterate() # Run APGD
+    # out, _, _ = allout
+    # plt.figure()
+    # print('out',type(out['iterand']))
+    # estimate = idct(out['iterand']).reshape(data.shape)
+    # print('estimate',estimate.shape)
+    # plt.imshow(estimate)
+    # print(f"proc time : {time.time() - start_time} s")
+    # if not no_plot:
+    #     plt.show()
+    # if save:
+    #     print(f"Files saved to : {save}")
+    # print(f"Time for FastConvolve2D: {time.time() - start_time} s")
 
-    class pylopsFastConvolveND(LinearOperator):
-        def __init__(self, N, h, dims, dtype='float64'):
-            """
-            Parameters
-            ----------
-            N : TYPE
-                DESCRIPTION.
-            h : TYPE
-                DESCRIPTION.
-            dims : TYPE
-                DESCRIPTION.
-            dtype : TYPE, optional
-                DESCRIPTION. The default is 'float64'.
-
-            Raises
-            ------
-            ValueError
-                DESCRIPTION.
-
-            Returns
-            -------
-            None.
-
-            """
-            self.h = h
-            if np.prod(dims) != N:
-                raise ValueError('product of dims must equal N!')
-            else:
-                self.dims = np.array(dims)
-            self.shape = (np.prod(self.dims), np.prod(self.dims))
-            self.dtype = np.dtype(dtype)
-            self.explicit = False
-            # extra for the fft_filter
-            pad_width = int(h.shape[0]/2)  # length of padding left/right of the 2-D array
-            pad_height = int(h.shape[1]/2)  # length of padding top/bottom of the 2-D array
-            padded_h = np.pad(h, ((pad_width, pad_width),(pad_height,pad_height)))
-            self.fft = rfft2(padded_h, axes=(0, 1))
-            self.pad_matrix = np.zeros(shape=padded_h.shape, dtype=float)
-            
-
-        def _matvec(self, x):
-            """
-            Parameters
-            ----------
-            x : TYPE
-                DESCRIPTION.
-
-            Returns
-            -------
-            y : TYPE
-                DESCRIPTION.
-
-            """
-            x = np.reshape(x, self.dims)
-            padded_x = self.pad_matrix
-            width_pad = int(x.shape[0]/2)
-            height_pad = int(x.shape[1]/2)
-            padded_x[width_pad:3*width_pad, height_pad:3*height_pad] = x
-            y = ifftshift(irfft2(self.fft * rfft2(padded_x, axes=(0, 1)), axes=(0, 1),),axes=(0, 1),)
-            y = y[width_pad:3*width_pad, height_pad:3*height_pad]
-            y = y.ravel()
-            return y
-
-
-        def _rmatvec(self, x):
-            """
-            Parameters
-            ----------
-            x : TYPE
-                DESCRIPTION.
-
-            Returns
-            -------
-            y : TYPE
-                DESCRIPTION.
-
-            """
-            x = np.reshape(x, self.dims)
-            padded_x = self.pad_matrix
-            width_pad = int(x.shape[0]/2)
-            height_pad = int(x.shape[1]/2)
-            padded_x[width_pad:3*width_pad, height_pad:3*height_pad] = x
-            y = ifftshift(irfft2(np.conj(self.fft) * rfft2(padded_x, axes=(0, 1)), axes=(0, 1)),axes=(0, 1),)
-            y = y[width_pad:3*width_pad, height_pad:3*height_pad]
-            y = y.ravel()
-            return y
-
-
-    def FastConvolve2D(size: int, filter: np.ndarray, shape: tuple) -> PyLopLinearOperator:
+class pylopsFastConvolveND(LinearOperator):
+    def __init__(self, N, h, dims, dtype='float64'):
         """
         Parameters
         ----------
-        size : int
+        N : TYPE
             DESCRIPTION.
-        filter : np.ndarray
+        h : TYPE
             DESCRIPTION.
-        shape : tuple
+        dims : TYPE
             DESCRIPTION.
+        dtype : TYPE, optional
+            DESCRIPTION. The default is 'float64'.
+
+        Raises
+        ------
+        ValueError
+            DESCRIPTION.
+
         Returns
         -------
-        PyLopLinearOperator
-            Constructs a linear operator from a :py:class:`pylops.LinearOperator` instance.
+        None.
+
         """
-        PyLop = pylopsFastConvolveND(N=size, h=filter, dims=shape)
-        return PyLopLinearOperator(PyLop)
+        self.h = h
+        if np.prod(dims) != N:
+            raise ValueError('product of dims must equal N!')
+        else:
+            self.dims = np.array(dims)
+        self.shape = (np.prod(self.dims), np.prod(self.dims))
+        self.dtype = np.dtype(dtype)
+        self.explicit = False
+        # extra for the fft_filter
+        pad_width = int(h.shape[0]/2)  # length of padding left/right of the 2-D array
+        pad_height = int(h.shape[1]/2)  # length of padding top/bottom of the 2-D array
+        padded_h = np.pad(h, ((pad_width, pad_width),(pad_height,pad_height)))
+        self.fft = rfft2(padded_h, axes=(0, 1))
+        self.pad_matrix = np.zeros(shape=padded_h.shape, dtype=float)
+        
+
+    def _matvec(self, x):
+        """
+        Parameters
+        ----------
+        x : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        y : TYPE
+            DESCRIPTION.
+
+        """
+        x = np.reshape(x, self.dims)
+        padded_x = self.pad_matrix
+        width_pad = int(x.shape[0]/2)
+        height_pad = int(x.shape[1]/2)
+        padded_x[width_pad:3*width_pad, height_pad:3*height_pad] = x
+        y = ifftshift(irfft2(self.fft * rfft2(padded_x, axes=(0, 1)), axes=(0, 1),),axes=(0, 1),)
+        y = y[width_pad:3*width_pad, height_pad:3*height_pad]
+        y = y.ravel()
+        return y
 
 
-    varlambda = 0.00001
-    print("Now we start")
-    start_time = time.time()
-    Gop = FastConvolve2D(size=data.size, filter=psf, shape=data.shape)
-    # an example of implementation using the FastConvolve2D
-    Gop.compute_lipschitz_cst()
-    loss = SquaredL2Loss(dim=data.size, data=data.flatten())
-    idct = reconstruct_dct.IDCT(shape=[data.size,data.size])
-    idct.compute_lipschitz_cst()
-    F_func = (1/2) * loss * Gop * idct
-    lassoG = varlambda * L1Norm(dim=data.size)
-    apgd = APGD(dim=data.size, F=F_func, G=lassoG, verbose=None, max_iter=10)
-    
-    allout = apgd.iterate() # Run APGD
-    out, _, _ = allout
-    plt.figure()
-    print('out',type(out['iterand']))
-    estimate = idct(out['iterand']).reshape(data.shape)
-    print('estimate',estimate.shape)
-    plt.imshow(estimate)
-    print(f"proc time : {time.time() - start_time} s")
-    if not no_plot:
-        plt.show()
-    if save:
-        print(f"Files saved to : {save}")
-    print(f"Time for FastConvolve2D: {time.time() - start_time} s")
+    def _rmatvec(self, x):
+        """
+        Parameters
+        ----------
+        x : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        y : TYPE
+            DESCRIPTION.
+
+        """
+        x = np.reshape(x, self.dims)
+        padded_x = self.pad_matrix
+        width_pad = int(x.shape[0]/2)
+        height_pad = int(x.shape[1]/2)
+        padded_x[width_pad:3*width_pad, height_pad:3*height_pad] = x
+        y = ifftshift(irfft2(np.conj(self.fft) * rfft2(padded_x, axes=(0, 1)), axes=(0, 1)),axes=(0, 1),)
+        y = y[width_pad:3*width_pad, height_pad:3*height_pad]
+        y = y.ravel()
+        return y
+
+
+def FastConvolve2D(size: int, filter: np.ndarray, shape: tuple) -> PyLopLinearOperator:
+    """
+    Parameters
+    ----------
+    size : int
+        DESCRIPTION.
+    filter : np.ndarray
+        DESCRIPTION.
+    shape : tuple
+        DESCRIPTION.
+    Returns
+    -------
+    PyLopLinearOperator
+        Constructs a linear operator from a :py:class:`pylops.LinearOperator` instance.
+    """
+    PyLop = pylopsFastConvolveND(N=size, h=filter, dims=shape)
+    return PyLopLinearOperator(PyLop)
+
     
 if __name__ == "__main__":
     reconstruction()
