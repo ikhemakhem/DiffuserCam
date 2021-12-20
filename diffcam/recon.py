@@ -139,7 +139,9 @@ def get_solver(data, psf, mode, Gop, loss, lambda1=.005, lambda2=10, huber_delta
     dctG = lambda1 * L1Norm(dim=data.size)
 
     # huber [NOTE]: @iskyboy fix this pls
-    huberF = ((1/2) * loss * Gop) + lambda2 * HuberNorm(dim = data.size, delta=huber_delta)*D
+    huberD = Gradient(shape=data.flatten().shape)
+    huberD.compute_lipschitz_cst()
+    huberF = ((1/2) * loss * Gop) + lambda2 * HuberNorm(dim = data.size, delta=huber_delta)*huberD
     huberG = .5 * lambda1 * NonNegativeOrthant(dim=data.size)
     huberK = IdentityOperator(data.size)
 
