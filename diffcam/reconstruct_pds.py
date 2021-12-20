@@ -112,6 +112,39 @@ def reconstruction(
     no_plot,
     single_psf,
 ):
+    """
+    Reconstructs image using one of the regularisations; Tikhonov (ridge), LASSO or Non-negative
+    
+    Parameters
+    ----------  
+        psf_fp : np.array
+            2D image.
+        data_fp : np.array
+            2D image
+        n_iter : float
+            Number of iterations of reconstruction.
+        downsample : float
+            Factor of which image gets downsampled.
+        disp : 
+        flip :
+        gray :
+        bayer :
+        bg : float
+            Blue gain.
+        rg : float 
+            Red gain.
+        gamma : float
+            factor for postprocessing. 
+        save : function
+            saves result automatically.
+        no_plot :
+        single_psf :
+    
+    Return
+    ----------  
+    Returns the reconstructed image
+
+    """
     psf, data = load_data(
         psf_fp=psf_fp,
         data_fp=data_fp,

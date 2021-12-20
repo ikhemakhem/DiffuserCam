@@ -22,11 +22,8 @@ import reconstruct_dct
 from pycsou.core import LinearOperator
 from pycsou.opt import APGD
 from pycsou.func import SquaredL2Loss, L1Norm
-from pycsou.linop import Convolve2D
 from pycsou.linop.base import PyLopLinearOperator
 from pylops import LinearOperator
-from pylops.utils.backend import get_array_module, get_convolve, \
-    get_correlate, to_cupy_conditional
 
 
 @click.command()
@@ -120,6 +117,39 @@ def reconstruction(
     no_plot,
     single_psf,
 ):
+    """
+    Reconstructs image using one of the regularisations; Tikhonov (ridge), LASSO or Non-negative
+    
+    Parameters
+    ----------  
+        psf_fp : np.array
+            2D image.
+        data_fp : np.array
+            2D image
+        n_iter : float
+            Number of iterations of reconstruction.
+        downsample : float
+            Factor of which image gets downsampled.
+        disp : 
+        flip :
+        gray :
+        bayer :
+        bg : float
+            Blue gain.
+        rg : float 
+            Red gain.
+        gamma : float
+            factor for postprocessing. 
+        save : function
+            saves result automatically.
+        no_plot :
+        single_psf :
+    
+    Return
+    ----------  
+    Returns the reconstructed image
+
+    """
     psf, data = load_data(
         psf_fp=psf_fp,
         data_fp=data_fp,
@@ -146,6 +176,28 @@ def reconstruction(
 
     class pylopsFastConvolveND(LinearOperator):
         def __init__(self, N, h, dims, dtype='float64'):
+            """
+            Parameters
+            ----------
+            N : TYPE
+                DESCRIPTION.
+            h : TYPE
+                DESCRIPTION.
+            dims : TYPE
+                DESCRIPTION.
+            dtype : TYPE, optional
+                DESCRIPTION. The default is 'float64'.
+
+            Raises
+            ------
+            ValueError
+                DESCRIPTION.
+
+            Returns
+            -------
+            None.
+
+            """
             self.h = h
             if np.prod(dims) != N:
                 raise ValueError('product of dims must equal N!')
@@ -163,6 +215,18 @@ def reconstruction(
             
 
         def _matvec(self, x):
+            """
+            Parameters
+            ----------
+            x : TYPE
+                DESCRIPTION.
+
+            Returns
+            -------
+            y : TYPE
+                DESCRIPTION.
+
+            """
             x = np.reshape(x, self.dims)
             padded_x = self.pad_matrix
             width_pad = int(x.shape[0]/2)
@@ -175,6 +239,18 @@ def reconstruction(
 
 
         def _rmatvec(self, x):
+            """
+            Parameters
+            ----------
+            x : TYPE
+                DESCRIPTION.
+
+            Returns
+            -------
+            y : TYPE
+                DESCRIPTION.
+
+            """
             x = np.reshape(x, self.dims)
             padded_x = self.pad_matrix
             width_pad = int(x.shape[0]/2)
@@ -187,38 +263,49 @@ def reconstruction(
 
 
     def FastConvolve2D(size: int, filter: np.ndarray, shape: tuple) -> PyLopLinearOperator:
+        """
+        Parameters
+        ----------
+        size : int
+            DESCRIPTION.
+        filter : np.ndarray
+            DESCRIPTION.
+        shape : tuple
+            DESCRIPTION.
+        Returns
+        -------
+        PyLopLinearOperator
+            Constructs a linear operator from a :py:class:`pylops.LinearOperator` instance.
+        """
         PyLop = pylopsFastConvolveND(N=size, h=filter, dims=shape)
         return PyLopLinearOperator(PyLop)
 
 
     varlambda = 0.00001
-    print('lambda', varlambda)
-    N = 1
-
     print("Now we start")
-    Gop = FastConvolve2D(size=data.size, filter=psf, shape=data.shape)
     start_time = time.time()
-    for _ in range(N):
-        Gop.compute_lipschitz_cst()
-        loss = SquaredL2Loss(dim=data.size, data=data.flatten())
-        idct = reconstruct_dct.IDCT(shape=[data.size,data.size])
-        idct.compute_lipschitz_cst()
-        F_func = (1/2) * loss * Gop * idct
-        lassoG = varlambda * L1Norm(dim=data.size)
-        apgd = APGD(dim=data.size, F=F_func, G=lassoG, verbose=None, max_iter=100)
-        
-        allout = apgd.iterate() # Run APGD
-        out, _, _ = allout
-        plt.figure()
-        print('out',type(out['iterand']))
-        estimate = idct(out['iterand']).reshape(data.shape)
-        print('estimate',estimate.shape)
-        plt.imshow(estimate)
-        print(f"proc time : {time.time() - start_time} s")
-        if not no_plot:
-            plt.show()
-        if save:
-            print(f"Files saved to : {save}")
+    Gop = FastConvolve2D(size=data.size, filter=psf, shape=data.shape)
+    # an example of implementation using the FastConvolve2D
+    Gop.compute_lipschitz_cst()
+    loss = SquaredL2Loss(dim=data.size, data=data.flatten())
+    idct = reconstruct_dct.IDCT(shape=[data.size,data.size])
+    idct.compute_lipschitz_cst()
+    F_func = (1/2) * loss * Gop * idct
+    lassoG = varlambda * L1Norm(dim=data.size)
+    apgd = APGD(dim=data.size, F=F_func, G=lassoG, verbose=None, max_iter=10)
+    
+    allout = apgd.iterate() # Run APGD
+    out, _, _ = allout
+    plt.figure()
+    print('out',type(out['iterand']))
+    estimate = idct(out['iterand']).reshape(data.shape)
+    print('estimate',estimate.shape)
+    plt.imshow(estimate)
+    print(f"proc time : {time.time() - start_time} s")
+    if not no_plot:
+        plt.show()
+    if save:
+        print(f"Files saved to : {save}")
     print(f"Time for FastConvolve2D: {time.time() - start_time} s")
     
 if __name__ == "__main__":

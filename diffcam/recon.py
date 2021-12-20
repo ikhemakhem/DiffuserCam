@@ -7,7 +7,7 @@ from diffcam.plot import plot_image
 from pycsou.linop import Gradient, Convolve2D
 from pycsou.opt import APGD, PDS
 from pycsou.func import SquaredL2Loss, SquaredL2Norm, Segment, L1Norm, NonNegativeOrthant
-
+from custom_ops import DCT, IDCT, HuberNorm
 
 class ReconstructionAlgorithm(abc.ABC):
     def __init__(self, psf, dtype=np.float32):
@@ -109,31 +109,38 @@ class ReconstructionAlgorithm(abc.ABC):
         else:
             return final_im
 
-
-
-
-def get_solver(data, psf, mode, Gop, loss, varlambda=.005, acceleration='CD'):
-    apdg_modes = ['ridge', 'lasso', 'nn']
-    pds_modes = ['nnL1']
+def get_solver(data, psf, mode, Gop, loss, lambda1=.005, lambda2=10, huber_delta=1.5,  acceleration='CD'):
+    apdg_modes = ['ridge', 'lasso', 'nn', 'dct']
+    pds_modes = ['nnL1', 'huber']
 
     Gop.compute_lipschitz_cst()
     # we should have F = 1/2 * ‖y − Hx‖ + λ‖x‖      with ‖.‖ squared L2 norm
-    ridgeF = ((1/2) * loss * Gop) + (varlambda * SquaredL2Norm(dim=data.size))
+    ridgeF = ((1/2) * loss * Gop) + (lambda1 * SquaredL2Norm(dim=data.size))
     # lasso, same but l1 norm (non diffirentiable)
     lassoF = ((1/2) * loss * Gop)
-    lassoG = varlambda * L1Norm(dim=data.size)
+    lassoG = lambda1 * L1Norm(dim=data.size)
     # non-negative least square, same but non-negativity prior (non diffirentiable)
     nnF = lassoF
-    nnG = NonNegativeOrthant(dim=data.size) # varlambda should have no effect in this case
+    nnG = NonNegativeOrthant(dim=data.size) # lambda1 should have no effect in this case
 
     # whatever the pds one was called
-    pdsD = Gradient(shape=data.shape)
-    pdsD.compute_lipschitz_cst()
-    mu = 0.035 * np.max(pdsD(Gop.adjoint(data.flatten()))) # Penalty strength
+    D = Gradient(shape=data.shape)
+    D.compute_lipschitz_cst()
+    mu = 0.035 * np.max(D(Gop.adjoint(data.flatten()))) # Penalty strength
 
     pdsF = ((1/2) * loss * Gop)
     pdsG = NonNegativeOrthant(dim=data.size)
-    pdsH = mu * L1Norm(dim=pdsD.shape[0])
+    pdsH = mu * L1Norm(dim=D.shape[0])
+
+    # dct
+    idct = IDCT(shape=[data.size,data.size])
+    idct.compute_lipschitz_cst()
+    dctF = (1/2) * loss * Gop * idct
+    dctG = lambda1 * L1Norm(dim=data.size)
+
+    # huber [NOTE]: @iskyboy fix this pls
+    huberF = ((1/2) * loss * Gop) + lambda2 * HuberNorm(dim = data.size, delta=huber_delta)*D
+    huberG = .5 * lambda1 * NonNegativeOrthant(dim=data.size)
 
     if mode == 'ridge':
         solver = APGD(dim=data.size, F=ridgeF, G=None, verbose=None, acceleration=acceleration)  # Initialise APGD with only our functional F to minimize
@@ -141,8 +148,12 @@ def get_solver(data, psf, mode, Gop, loss, varlambda=.005, acceleration='CD'):
         solver = APGD(dim=data.size, F=lassoF, G=lassoG, verbose=None, acceleration=acceleration) 
     elif mode == 'nn':
         solver = APGD(dim=data.size, F=nnF, G=nnG, verbose=None, acceleration=acceleration)
+    elif mode == 'dct':
+        solver = APGD(dim=data.size, F=dctF, G=dctG, verbose=None, acceleration=acceleration)
     elif mode == pds_modes[0]:
-        solver = PDS(dim=data.size, F=pdsF, G=pdsG, H=pdsH, K=pdsD, verbose=None)
+        solver = PDS(dim=data.size, F=pdsF, G=pdsG, H=pdsH, K=D, verbose=None)
+    elif mode == 'huber':
+        solver = PDS(dim=Gop.shape[1], F=huberF, G=huberG, H=None, K=None, verbose=None)  # Initialise PDS
     else:
         raise Exception(str(mode) + ' mode not found.')
 
@@ -155,28 +166,22 @@ def get_solver(data, psf, mode, Gop, loss, varlambda=.005, acceleration='CD'):
 
     return solver
 
-
 class Recon():
-    def __init__(self, data, psf, mode, varlambda=.005, color=True):
+    def __init__(self, data, psf, mode, lambda1=.005, color=True):
         assert color #this was not a question.
         data = {'r': data[:,:,0], 'g': data[:,:,1], 'b': data[:,:,2]}
         psf = {'r': psf[:,:,0], 'g': psf[:,:,1], 'b': psf[:,:,2]}
-        to_save = np.array(list(data.values()))
-        print('to_save', to_save.shape)
-        np.save('semi-transposed_data.npy', to_save)
-        print('pls')
 
         Gop = {key: Convolve2D(size=data[key].size, filter=psf[key], shape=data[key].shape) for key in psf}
         loss = {key: SquaredL2Loss(dim=data[key].size, data=data[key].flatten()) for key in data}
 
-        self.solver = {key: get_solver(data[key], psf[key], mode, Gop[key], loss[key], varlambda) for key in data}
+        self.solver = {key: get_solver(data[key], psf[key], mode, Gop[key], loss[key], lambda1) for key in data}
 
 
     def iterate(self):
         out = []
         for key in self.solver:
             out.append(self.solver[key].iterate())
-            np.save(key+'estimate.npy', self.solver[key].get_estimate())
 
         return out
 
