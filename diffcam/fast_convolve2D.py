@@ -143,175 +143,60 @@ def reconstruction(
         save = plib.Path(__file__).parent / save
         save.mkdir(exist_ok=False)
 
+
     class pylopsFastConvolveND(LinearOperator):
-        def __init__(self, N, h, dims, fft_filter, offset=None, dirs=None,
-                    method='fft', dtype='float64'):
-            # print("in pylopsFastConvolveND")
-            ncp = get_array_module(h)
+        def __init__(self, N, h, dims, dtype='float64'):
             self.h = h
-            self.nh = np.array(self.h.shape)
-            self.dirs = np.arange(len(dims)) if dirs is None else np.array(dirs)
-
-            # padding
-            if offset is None:
-                offset = np.zeros(self.h.ndim, dtype=int)
-            else:
-                offset = np.array(offset, dtype=int)
-            self.offset = 2 * (self.nh // 2 - offset)
-            pad = [(0, 0) for _ in range(self.h.ndim)]
-            dopad = False
-            for inh, nh in enumerate(self.nh):
-                if nh % 2 == 0:
-                    self.offset[inh] -= 1
-                if self.offset[inh] != 0:
-                    pad[inh] = [self.offset[inh] if self.offset[inh] > 0 else 0,
-                                -self.offset[inh] if self.offset[inh] < 0 else 0]
-                    dopad = True
-            if dopad:
-                self.h = ncp.pad(self.h, pad, mode='constant')
-            self.nh = self.h.shape
-
-            # find out which directions are used for convolution and define offsets
-            if len(dims) != len(self.nh):
-                dimsh = np.ones(len(dims), dtype=int)
-                for idir, dir in enumerate(self.dirs):
-                    dimsh[dir] = self.nh[idir]
-                self.h = self.h.reshape(dimsh)
-
             if np.prod(dims) != N:
                 raise ValueError('product of dims must equal N!')
             else:
                 self.dims = np.array(dims)
-                self.reshape = True
-            # convolve and correate functions
-            self.convolve = get_convolve(h)
-            self.correlate = get_correlate(h)
-            self.method = method
-
             self.shape = (np.prod(self.dims), np.prod(self.dims))
             self.dtype = np.dtype(dtype)
             self.explicit = False
-
             # extra for the fft_filter
-            self.fft = fft_filter
-            # self.pad_matrix = np.zeros((2*fft_filter.shape), dtype=float)
-
+            pad_width = int(h.shape[0]/2)  # length of padding left/right of the 2-D array
+            pad_height = int(h.shape[1]/2)  # length of padding top/bottom of the 2-D array
+            padded_h = np.pad(h, ((pad_width, pad_width),(pad_height,pad_height)))
+            self.fft = rfft2(padded_h, axes=(0, 1))
+            self.pad_matrix = np.zeros(shape=padded_h.shape, dtype=float)
             
 
         def _matvec(self, x):
-            # correct type of h if different from x and choose methods accordingly
-            if type(self.h) != type(x):
-                self.h = to_cupy_conditional(x, self.h)
-                self.convolve = get_convolve(self.h)
-                self.correlate = get_correlate(self.h)
             x = np.reshape(x, self.dims)
-            pad_width = int(x.shape[0]/2)  # length of padding left/right of the 2-D array
-            pad_height = int(x.shape[1]/2)  # length of padding top/bottom of the 2-D array
-            padded_x = np.pad(x, ((pad_width, pad_width),(pad_height,pad_height)), mode="reflect")
+            padded_x = self.pad_matrix
+            width_pad = int(x.shape[0]/2)
+            height_pad = int(x.shape[1]/2)
+            padded_x[width_pad:3*width_pad, height_pad:3*height_pad] = x
             y = ifftshift(irfft2(self.fft * rfft2(padded_x, axes=(0, 1)), axes=(0, 1),),axes=(0, 1),)
-            # y = ifftshift(irfft2(self.fft * rfft2(padded_x, axes=None), axes=None,),axes=None,)
-            cut_sample_w = int((pad_width+self.fft.shape[0]/4)/2)   
-            cut_sample_h = int((pad_height+self.fft.shape[1]/2)/2)
-            y = y[cut_sample_w:3*cut_sample_w, cut_sample_h:3*cut_sample_h]
-            # y = self.convolve(x, self.h, mode='same', method=self.method) # it was this before
+            y = y[width_pad:3*width_pad, height_pad:3*height_pad]
             y = y.ravel()
             return y
+
 
         def _rmatvec(self, x):
-            # correct type of h if different from x and choose methods accordingly
-            if type(self.h) != type(x):
-                self.h = to_cupy_conditional(x, self.h)
-                self.convolve = get_convolve(self.h)
-                self.correlate = get_correlate(self.h)
             x = np.reshape(x, self.dims)
-            pad_width = int(x.shape[0]/2)  # length of padding left/right of the 2-D array
-            pad_height = int(x.shape[1]/2)  # length of padding top/bottom of the 2-D array
-            padded_x = np.pad(x, ((pad_width, pad_width),(pad_height,pad_height)), mode="reflect")
-            y = ifftshift(irfft2(self.fft * np.conj(rfft2(padded_x, axes=(0, 1))), axes=(0, 1)),axes=(0, 1),)
-            # y = ifftshift(irfft2(self.fft * np.conj(rfft2(padded_x, axes=None)), axes=None),axes=None,)
-            cut_sample_w = int((pad_width+self.fft.shape[0]/4)/2)
-            cut_sample_h = int((pad_height+self.fft.shape[1]/2)/2)
-            y = y[cut_sample_w:3*cut_sample_w, cut_sample_h:3*cut_sample_h]
-            #y = self.correlate(x, self.h, mode='same', method=self.method) # it was this before
+            padded_x = self.pad_matrix
+            width_pad = int(x.shape[0]/2)
+            height_pad = int(x.shape[1]/2)
+            padded_x[width_pad:3*width_pad, height_pad:3*height_pad] = x
+            y = ifftshift(irfft2(np.conj(self.fft) * rfft2(padded_x, axes=(0, 1)), axes=(0, 1)),axes=(0, 1),)
+            y = y[width_pad:3*width_pad, height_pad:3*height_pad]
             y = y.ravel()
             return y
-    
-    def pylopsConvolve2D(N, h, dims, fft_filterP2D, offset=(0, 0), nodir=None, dtype='float64',
-               method='fft'):
-        # print("in pylopsConvolve2D")
-        if h.ndim != 2:
-            raise ValueError('h must be 2-dimensional')
-        if nodir is None:
-            dirs = (0, 1)
-        elif nodir == 0:
-            dirs = (1, 2)
-        elif nodir == 1:
-            dirs = (0, 2)
-        else:
-            dirs = (0, 1)
 
-        cop = pylopsFastConvolveND(N, h, dims, fft_filterP2D, offset=offset, dirs=dirs, method=method,
-                                   dtype=dtype)
-        return cop
 
-    def FastConvolve2D(size: int, filter: np.ndarray, shape: tuple, fft_filterFC2: np.ndarray,
-                       dtype: type = 'float64', method: str = 'fft') -> PyLopLinearOperator:
-        # print("in FastConvolve2D")
-        if (filter.shape[0] % 2) == 0:
-            offset0 = filter.shape[0] // 2 - 1
-        else:
-            offset0 = filter.shape[0] // 2
-        if (filter.shape[1] % 2) == 0:
-            offset1 = filter.shape[1] // 2 - 1
-        else:
-            offset1 = filter.shape[1] // 2
-        offset = (offset0, offset1)
-        PyLop = pylopsConvolve2D(N=size, h=filter, dims=shape, fft_filterP2D = fft_filterFC2,
-                                 nodir=None, dtype=dtype, method=method, offset=offset)
+    def FastConvolve2D(size: int, filter: np.ndarray, shape: tuple) -> PyLopLinearOperator:
+        PyLop = pylopsFastConvolveND(N=size, h=filter, dims=shape)
         return PyLopLinearOperator(PyLop)
 
-    if np.isreal(psf.all()):
-        print("the psf is real")
-    else:
-        print("Not real")
-    print("shape psf before", psf.shape)
-    pad_width = int(psf.shape[0]/2)  # length of padding left/right of the 2-D array
-    pad_height = int(psf.shape[1]/2)  # length of padding top/bottom of the 2-D array
-    padded_psf = np.pad(psf, ((pad_width, pad_width),(pad_height,pad_height)), mode="reflect")
-    print("shape psf after padding", padded_psf.shape)
-    fft_psf = rfft2(padded_psf, axes=(0, 1))
+
     varlambda = 0.00001
-    print('lambda',varlambda)
+    print('lambda', varlambda)
     N = 1
 
-    # Gop = Convolve2D(size=data.size,
-    #                     filter=psf, shape=data.shape)
-    # start_time = time.time()
-    # for _ in range(N):
-    #     Gop.compute_lipschitz_cst()
-    #     loss = SquaredL2Loss(dim=data.size, data=data.flatten())
-    #     idct = reconstruct_dct.IDCT(shape=[data.size,data.size])
-    #     idct.compute_lipschitz_cst()
-    #     F_func = (1/2) * loss * Gop * idct
-    #     lassoG = varlambda * L1Norm(dim=data.size)
-    #     apgd = APGD(dim=data.size, F=F_func, G=lassoG, verbose=None, max_iter=200)
-        
-    #     allout = apgd.iterate() # Run APGD
-    #     out, _, _ = allout
-    #     plt.figure()
-    #     print('out',type(out['iterand']))
-    #     estimate = idct(out['iterand']).reshape(data.shape)
-    #     print('estimate',estimate.shape)
-    #     plt.imshow(estimate)
-    #     print(f"proc time : {time.time() - start_time} s")
-    #     if not no_plot:
-    #         plt.show()
-    #     if save:
-    #         print(f"Files saved to : {save}")
-    # print(f"Time for Convolve2D : {time.time() - start_time} s")
     print("Now we start")
-    Gop = FastConvolve2D(size=data.size, filter=psf,
-                         shape=data.shape, fft_filterFC2 = fft_psf)
+    Gop = FastConvolve2D(size=data.size, filter=psf, shape=data.shape)
     start_time = time.time()
     for _ in range(N):
         Gop.compute_lipschitz_cst()
@@ -320,7 +205,7 @@ def reconstruction(
         idct.compute_lipschitz_cst()
         F_func = (1/2) * loss * Gop * idct
         lassoG = varlambda * L1Norm(dim=data.size)
-        apgd = APGD(dim=data.size, F=F_func, G=lassoG, verbose=None, max_iter=200)
+        apgd = APGD(dim=data.size, F=F_func, G=lassoG, verbose=None, max_iter=100)
         
         allout = apgd.iterate() # Run APGD
         out, _, _ = allout
