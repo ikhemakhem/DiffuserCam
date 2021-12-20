@@ -4,7 +4,7 @@ import pathlib as plib
 import matplotlib.pyplot as plt
 from scipy.fftpack import next_fast_len
 from diffcam.plot import plot_image
-from pycsou.linop import Gradient, Convolve2D
+from pycsou.linop import Gradient, Convolve2D, IdentityOperator
 from pycsou.opt import APGD, PDS
 from pycsou.func import SquaredL2Loss, SquaredL2Norm, Segment, L1Norm, NonNegativeOrthant
 from custom_ops import DCT, IDCT, HuberNorm
@@ -141,6 +141,7 @@ def get_solver(data, psf, mode, Gop, loss, lambda1=.005, lambda2=10, huber_delta
     # huber [NOTE]: @iskyboy fix this pls
     huberF = ((1/2) * loss * Gop) + lambda2 * HuberNorm(dim = data.size, delta=huber_delta)*D
     huberG = .5 * lambda1 * NonNegativeOrthant(dim=data.size)
+    huberK = IdentityOperator(data.size)
 
     if mode == 'ridge':
         solver = APGD(dim=data.size, F=ridgeF, G=None, verbose=None, acceleration=acceleration)  # Initialise APGD with only our functional F to minimize
@@ -153,7 +154,7 @@ def get_solver(data, psf, mode, Gop, loss, lambda1=.005, lambda2=10, huber_delta
     elif mode == pds_modes[0]:
         solver = PDS(dim=data.size, F=pdsF, G=pdsG, H=pdsH, K=D, verbose=None)
     elif mode == 'huber':
-        solver = PDS(dim=Gop.shape[1], F=huberF, G=huberG, H=None, K=None, verbose=None)  # Initialise PDS
+        solver = PDS(dim=Gop.shape[1], F=huberF, G=huberG, H=huberG, K=huberK, verbose=None)  # Initialise PDS
     else:
         raise Exception(str(mode) + ' mode not found.')
 
