@@ -123,7 +123,7 @@ class IDCT(LinearOperator):
     def adjoint(self, y: np.ndarray, my_type = 2, my_norm = 'ortho') -> np.ndarray:
         return dctn(y, type=my_type, norm = my_norm)
 
-def reconstruction_dct(
+def reconstruction(
     psf_fp,
     data_fp,
     n_iter,
@@ -139,6 +139,39 @@ def reconstruction_dct(
     no_plot,
     single_psf,
 ):
+    """
+    Reconstructs image using one of the regularisations; Tikhonov (ridge), LASSO or Non-negative
+    
+    Parameters
+    ----------  
+        psf_fp : np.array
+            2D image.
+        data_fp : np.array
+            2D image
+        n_iter : float
+            Number of iterations of reconstruction.
+        downsample : float
+            Factor of which image gets downsampled.
+        disp : 
+        flip :
+        gray :
+        bayer :
+        bg : float
+            Blue gain.
+        rg : float 
+            Red gain.
+        gamma : float
+            factor for postprocessing. 
+        save : function
+            saves result automatically.
+        no_plot :
+        single_psf :
+    
+    Return
+    ----------  
+    Returns the reconstructed image
+
+    """
     psf, data = load_data(
         psf_fp=psf_fp,
         data_fp=data_fp,
@@ -186,7 +219,10 @@ def reconstruction_dct(
     print("lassoG", lassoG.shape)
 
     apgd = APGD(dim=data.size, F=F_func, G=lassoG, verbose=None) # question 5 DCT
-   
+    ####################
+    # apgd = APGD(dim=data.size, F=ridgeF, G=None, verbose=None)  # Initialise APGD with only our functional F to minimize
+    # apgd = APGD(dim=data.size, F=lassoF, G=lassoG, verbose=None)  
+    # apgd = APGD(dim=data.size, F=nnF, G=nnG, verbose=None)
     print(f"setup time : {time.time() - start_time} s")
 
 
@@ -197,7 +233,7 @@ def reconstruction_dct(
     plt.figure()
     print('out',type(out['iterand']))
     
-    estimate = idct(out['iterand']).reshape(data.shape)
+    estimate = idct.adjoint(out['iterand']).reshape(data.shape)
     print('estimate',estimate.shape)
     
     plt.imshow(estimate)
@@ -211,4 +247,4 @@ def reconstruction_dct(
 
 
 if __name__ == "__main__":
-    reconstruction_dct()
+    reconstruction()

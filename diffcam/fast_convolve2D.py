@@ -120,6 +120,39 @@ def reconstruction(
     no_plot,
     single_psf,
 ):
+    """
+    Reconstructs image using one of the regularisations; Tikhonov (ridge), LASSO or Non-negative
+    
+    Parameters
+    ----------  
+        psf_fp : np.array
+            2D image.
+        data_fp : np.array
+            2D image
+        n_iter : float
+            Number of iterations of reconstruction.
+        downsample : float
+            Factor of which image gets downsampled.
+        disp : 
+        flip :
+        gray :
+        bayer :
+        bg : float
+            Blue gain.
+        rg : float 
+            Red gain.
+        gamma : float
+            factor for postprocessing. 
+        save : function
+            saves result automatically.
+        no_plot :
+        single_psf :
+    
+    Return
+    ----------  
+    Returns the reconstructed image
+
+    """
     psf, data = load_data(
         psf_fp=psf_fp,
         data_fp=data_fp,
@@ -144,8 +177,41 @@ def reconstruction(
         save.mkdir(exist_ok=False)
 
     class pylopsFastConvolveND(LinearOperator):
+        """
+        """
         def __init__(self, N, h, dims, fft_filter, offset=None, dirs=None,
                     method='fft', dtype='float64'):
+            """
+
+            Parameters
+            ----------
+            N : TYPE
+                DESCRIPTION.
+            h : TYPE
+                DESCRIPTION.
+            dims : TYPE
+                DESCRIPTION.
+            fft_filter : TYPE
+                DESCRIPTION.
+            offset : TYPE, optional
+                DESCRIPTION. The default is None.
+            dirs : TYPE, optional
+                DESCRIPTION. The default is None.
+            method : TYPE, optional
+                DESCRIPTION. The default is 'fft'.
+            dtype : TYPE, optional
+                DESCRIPTION. The default is 'float64'.
+
+            Raises
+            ------
+            ValueError
+                DESCRIPTION.
+
+            Returns
+            -------
+            None.
+
+            """
             # print("in pylopsFastConvolveND")
             ncp = get_array_module(h)
             self.h = h
@@ -199,6 +265,19 @@ def reconstruction(
             
 
         def _matvec(self, x):
+            """
+
+            Parameters
+            ----------
+            x : TYPE
+                DESCRIPTION.
+
+            Returns
+            -------
+            y : TYPE
+                DESCRIPTION.
+
+            """
             # correct type of h if different from x and choose methods accordingly
             if type(self.h) != type(x):
                 self.h = to_cupy_conditional(x, self.h)
@@ -218,6 +297,19 @@ def reconstruction(
             return y
 
         def _rmatvec(self, x):
+            """
+
+            Parameters
+            ----------
+            x : TYPE
+                DESCRIPTION.
+
+            Returns
+            -------
+            y : TYPE
+                DESCRIPTION.
+
+            """
             # correct type of h if different from x and choose methods accordingly
             if type(self.h) != type(x):
                 self.h = to_cupy_conditional(x, self.h)
@@ -238,6 +330,38 @@ def reconstruction(
     
     def pylopsConvolve2D(N, h, dims, fft_filterP2D, offset=(0, 0), nodir=None, dtype='float64',
                method='fft'):
+        """
+
+        Parameters
+        ----------
+        N : TYPE
+            DESCRIPTION.
+        h : TYPE
+            DESCRIPTION.
+        dims : TYPE
+            DESCRIPTION.
+        fft_filterP2D : TYPE
+            DESCRIPTION.
+        offset : TYPE, optional
+            DESCRIPTION. The default is (0, 0).
+        nodir : TYPE, optional
+            DESCRIPTION. The default is None.
+        dtype : TYPE, optional
+            DESCRIPTION. The default is 'float64'.
+        method : TYPE, optional
+            DESCRIPTION. The default is 'fft'.
+
+        Raises
+        ------
+        ValueError
+            DESCRIPTION.
+
+        Returns
+        -------
+        cop : TYPE
+            DESCRIPTION.
+
+        """
         # print("in pylopsConvolve2D")
         if h.ndim != 2:
             raise ValueError('h must be 2-dimensional')
@@ -256,6 +380,29 @@ def reconstruction(
 
     def FastConvolve2D(size: int, filter: np.ndarray, shape: tuple, fft_filterFC2: np.ndarray,
                        dtype: type = 'float64', method: str = 'fft') -> PyLopLinearOperator:
+        """
+
+        Parameters
+        ----------
+        size : int
+            DESCRIPTION.
+        filter : np.ndarray
+            DESCRIPTION.
+        shape : tuple
+            DESCRIPTION.
+        fft_filterFC2 : np.ndarray
+            DESCRIPTION.
+        dtype : type, optional
+            DESCRIPTION. The default is 'float64'.
+        method : str, optional
+            DESCRIPTION. The default is 'fft'.
+
+        Returns
+        -------
+        PyLopLinearOperator
+            Constructs a linear operator from a :py:class:`pylops.LinearOperator` instance.
+
+        """
         # print("in FastConvolve2D")
         if (filter.shape[0] % 2) == 0:
             offset0 = filter.shape[0] // 2 - 1

@@ -97,30 +97,6 @@ import numpy as np
     is_flag=True,
     help="Same PSF for all channels (sum) or unique PSF for RGB.",
 )
-class HuberNorm(DifferentiableFunctional):
-    def __init__(self, dim: int, delta: float):
-        super(HuberNorm, self).__init__(dim=dim, diff_lipschitz_cst=1)
-        self.delta = delta
-    def __call__(self, x: np.ndarray) -> float:
-        z = x
-        for i in range(z.size):
-            if abs(z[i]) <= self.delta:
-                z[i] = 0.5*z[i]*z[i]
-            else:
-                z[i] = self.delta*(abs(z)-self.delta/2) 
-        return np.sum(z)
-    
-    def jacobianT(self, x: np.ndarray) -> np.ndarray:
-        grad = np.empty_like(x)
-        for i in range(x.size):
-            if abs(x[i])<= self.delta:
-                grad[i] = x[i]
-            elif x[i] > self.delta:
-                grad[i] = self.delta
-            else:
-                grad[i] = self.delta
-        return grad
-
 def reconstruction(
     psf_fp,
     data_fp,
@@ -137,6 +113,39 @@ def reconstruction(
     no_plot,
     single_psf,
 ):
+    """
+    Reconstructs image using one of the regularisations; Tikhonov (ridge), LASSO or Non-negative
+    
+    Parameters
+    ----------  
+        psf_fp : np.array
+            2D image.
+        data_fp : np.array
+            2D image
+        n_iter : float
+            Number of iterations of reconstruction.
+        downsample : float
+            Factor of which image gets downsampled.
+        disp : 
+        flip :
+        gray :
+        bayer :
+        bg : float
+            Blue gain.
+        rg : float 
+            Red gain.
+        gamma : float
+            factor for postprocessing. 
+        save : function
+            saves result automatically.
+        no_plot :
+        single_psf :
+    
+    Return
+    ----------  
+    Returns the reconstructed image
+
+    """
     psf, data = load_data(
         psf_fp=psf_fp,
         data_fp=data_fp,
@@ -159,12 +168,79 @@ def reconstruction(
         save = "YOUR_RECONSTRUCTION_" + save + timestamp
         save = plib.Path(__file__).parent / save
         save.mkdir(exist_ok=False)
-    
+
+
+
     start_time = time.time()
     # TODO : setup for your reconstruction algorithm
     # Gop is our mask (tape) described by our psf
     print(psf.shape)
     print(data.size)
+    class HuberNorm(DifferentiableFunctional):
+        """
+        Constructs the Huber Norm of differentiable functions, where DifferentiableFunctions is the base class of differentiable functions.
+        """
+        def __init__(self, dim: int, delta: float):
+            """
+            Parameters
+            ----------
+            dim : int
+                Dimension of differentiable function.
+            delta : float 
+                DESCRIPTION.
+
+            Returns
+            -------
+            None.
+
+            """
+            super(HuberNorm, self).__init__(dim=dim, diff_lipschitz_cst=1)
+            self.delta = delta
+        def __call__(self, x: np.ndarray) -> float:
+            """
+
+            Parameters
+            ----------
+            x : np.ndarray
+                DESCRIPTION.
+
+            Returns
+            -------
+            float
+                DESCRIPTION.
+
+            """
+            z = x
+            for i in range(z.size):
+                if abs(z[i]) <= self.delta:
+                    z[i] = 0.5*z[i]*z[i]
+                else:
+                    z[i] = self.delta*(abs(z)-self.delta/2) 
+            return np.sum(z)
+        
+        def jacobianT(self, x: np.ndarray) -> np.ndarray:
+            """
+
+            Parameters
+            ----------
+            x : np.ndarray
+                DESCRIPTION.
+
+            Returns
+            -------
+            grad : np.ndarray
+                DESCRIPTION.
+
+            """
+            grad = np.empty_like(x)
+            for i in range(x.size):
+                if abs(x[i])<= self.delta:
+                    grad[i] = x[i]
+                elif x[i] > self.delta:
+                    grad[i] = self.delta
+                else:
+                    grad[i] = self.delta
+            return grad
 
     lambda1 = 1
     lambda2 = 10
