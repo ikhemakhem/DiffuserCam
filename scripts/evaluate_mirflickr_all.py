@@ -111,6 +111,7 @@ def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
     # lambdas = [1e-7, 1e-6, 1e-5, 1e-4,
     #            1e-3, 1e-2, 1e-1]
     # huber_delta = [0.5, 1.5, 2.5, 3.5, 4.5]
+    # txtfile = 'huber_metrics_flickrdata.txt'
     """ Iskander's command to run (stand in DiffuserCam when you run)
     python scripts/evaluate_mirflickr_all.py --data subset_mir_flickr_dataset/nn
     """
@@ -124,6 +125,7 @@ def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
     #            3e-2, 7e-2,
     #            3e-1, 7e-1]
     # huber_delta = [0]
+    # txtfile = 'nn_metrics_flickrdata.txt'
     """ Elize's command to run (stand in DiffuserCam when you run)
     python scripts/evaluate_mirflickr_all.py --data subset_mir_flickr_dataset/nn
     """
@@ -139,6 +141,7 @@ def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
     #            2e-1, 5e-1, 8e-1,
     #            2,    5,    8]
     # huber_delta = [0]
+    # txtfile = 'l2_metrics_flickrdata.txt'
     """ Ludvig's command to run (stand in DiffuserCam when you run)
     python scripts/evaluate_mirflickr_all.py --data subset_mir_flickr_dataset/l2
     """
@@ -151,11 +154,12 @@ def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
     #            2e-2, 9e-2,
     #            7e-1]
     # huber_delta = [0]
+    # txtfile = 'l1_metrics_flickrdata.txt'
     """ Adrien's command to run (stand in DiffuserCam when you run)
     python scripts/evaluate_mirflickr_all.py --data subset_mir_flickr_dataset/l1
     """
     ################################################
-    with open('metrics_flickrdata.txt', 'a') as f:
+    with open(txtfile, 'a') as f:
         timestamp = datetime.now().strftime("%d-%m-%Y_%Hh%M")
         f.write("\n\n" + timestamp + "\n")
         for fn in files:
