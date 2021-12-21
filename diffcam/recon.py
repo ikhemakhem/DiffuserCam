@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 from scipy.fftpack import next_fast_len
 from scipy.fft import dctn, idctn
 from diffcam.plot import plot_image
-from fast_convolve2D import FastConvolve2D
 from pycsou.linop import Gradient, Convolve2D, IdentityOperator
 from pycsou.opt import APGD, PDS
 from pycsou.func import SquaredL2Loss, SquaredL2Norm, Segment, L1Norm, NonNegativeOrthant
