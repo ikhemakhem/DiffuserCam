@@ -17,7 +17,6 @@ from datetime import datetime
 from diffcam.io import load_data
 
 from scipy.fft import rfft2, irfft2, ifftshift 
-# import reconstruct_dct
 
 from pycsou.core import LinearOperator
 from pycsou.opt import APGD
