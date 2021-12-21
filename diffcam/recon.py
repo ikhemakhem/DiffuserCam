@@ -8,7 +8,8 @@ from diffcam.plot import plot_image
 from pycsou.linop import Gradient, Convolve2D
 from pycsou.opt import APGD, PDS
 from pycsou.func import SquaredL2Loss, SquaredL2Norm, Segment, L1Norm, NonNegativeOrthant
-from custom_ops import DCT, IDCT, HuberNorm
+from diffcam.custom_ops import DCT, IDCT, HuberNorm
+from diffcam.fast_convolve2D import FastConvolve2D
 
 class ReconstructionAlgorithm(abc.ABC):
     def __init__(self, psf, dtype=np.float32):
@@ -174,7 +175,7 @@ class Recon():
         data = {'r': data[:,:,0], 'g': data[:,:,1], 'b': data[:,:,2]}
         psf = {'r': psf[:,:,0], 'g': psf[:,:,1], 'b': psf[:,:,2]}
 
-        Gop = {key: Convolve2D(size=data[key].size, filter=psf[key], shape=data[key].shape) for key in psf}
+        Gop = {key: FastConvolve2D(size=data[key].size, filter=psf[key], shape=data[key].shape) for key in psf}
         loss = {key: SquaredL2Loss(dim=data[key].size, data=data[key].flatten()) for key in data}
 
         self.solver = {key: get_solver(data[key], psf[key], mode, Gop[key], loss[key], lambda1) for key in data}
