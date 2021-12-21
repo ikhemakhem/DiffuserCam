@@ -3,12 +3,11 @@ import numpy as np
 import pathlib as plib
 import matplotlib.pyplot as plt
 from scipy.fftpack import next_fast_len
+from scipy.fft import dctn, idctn
 from diffcam.plot import plot_image
-from fast_convolve2D import FastConvolve2D
-from pycsou.linop import Gradient, Convolve2D, IdentityOperator
+from pycsou.linop import Gradient, Convolve2D
 from pycsou.opt import APGD, PDS
 from pycsou.func import SquaredL2Loss, SquaredL2Norm, Segment, L1Norm, NonNegativeOrthant
-
 from custom_ops import DCT, IDCT, HuberNorm
 
 class ReconstructionAlgorithm(abc.ABC):
@@ -141,11 +140,8 @@ def get_solver(data, psf, mode, Gop, loss, lambda1=.005, lambda2=10, huber_delta
     dctG = lambda1 * L1Norm(dim=data.size)
 
     # huber [NOTE]: @iskyboy fix this pls
-    huberD = Gradient(shape=data.flatten().shape)
-    huberD.compute_lipschitz_cst()
-    huberF = ((1/2) * loss * Gop) + lambda2 * HuberNorm(dim = data.size, delta=huber_delta)*huberD
-    huberG = .5 * lambda1 * NonNegativeOrthant(dim=data.size)
-    huberK = IdentityOperator(data.size)
+    # huberF = ((1/2) * loss * Gop) + lambda2 * HuberNorm(dim = data.size, delta=huber_delta)*D
+    # huberG = .5 * lambda1 * NonNegativeOrthant(dim=data.size)
 
     if mode == 'ridge':
         solver = APGD(dim=data.size, F=ridgeF, G=None, verbose=None, acceleration=acceleration)  # Initialise APGD with only our functional F to minimize
@@ -157,13 +153,14 @@ def get_solver(data, psf, mode, Gop, loss, lambda1=.005, lambda2=10, huber_delta
         solver = APGD(dim=data.size, F=dctF, G=dctG, verbose=None, acceleration=acceleration)
     elif mode == pds_modes[0]:
         solver = PDS(dim=data.size, F=pdsF, G=pdsG, H=pdsH, K=D, verbose=None)
-    elif mode == 'huber':
-        solver = PDS(dim=Gop.shape[1], F=huberF, G=huberG, H=huberG, K=huberK, verbose=None)
+    # elif mode == 'huber':
+    #     solver = PDS(dim=Gop.shape[1], F=huberF, G=huberG, H=None, K=None, verbose=None)  # Initialise PDS
     else:
         raise Exception(str(mode) + ' mode not found.')
 
-
-    if mode in apdg_modes:
+    if mode == 'dct':
+        solver.get_estimate = lambda : idct.adjoint(solver.iterand['iterand']).reshape(data.shape)
+    elif mode in apdg_modes:
         solver.get_estimate = lambda : solver.iterand['iterand'].reshape(data.shape)
     else:
         solver.get_estimate = lambda : solver.iterand['primal_variable'].reshape(data.shape)
@@ -177,7 +174,7 @@ class Recon():
         data = {'r': data[:,:,0], 'g': data[:,:,1], 'b': data[:,:,2]}
         psf = {'r': psf[:,:,0], 'g': psf[:,:,1], 'b': psf[:,:,2]}
 
-        Gop = {key: FastConvolve2D(size=data[key].size, filter=psf[key], shape=data[key].shape) for key in psf}
+        Gop = {key: Convolve2D(size=data[key].size, filter=psf[key], shape=data[key].shape) for key in psf}
         loss = {key: SquaredL2Loss(dim=data[key].size, data=data[key].flatten()) for key in data}
 
         self.solver = {key: get_solver(data[key], psf[key], mode, Gop[key], loss[key], lambda1) for key in data}
