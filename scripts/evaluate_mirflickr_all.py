@@ -91,17 +91,13 @@ def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
         save = "admm_mirflickr" + timestamp
         save = plib.Path(__file__).parent / save
         save.mkdir(exist_ok=False)
-
-    # -- create ADMM object
    
-
-    print("\nLooping through files...")
     mse_scores = []
     psnr_scores = []
     ssim_scores = []
     lpips_scores = []
     ####### CHANGE TO WHERE YOU WANT YOUR OUTPUT #######
-    local_dir = 'C:\\Users\\ludvi\\programming\\EPFL\\COM-514\\project_ours\\images\\mirflickr\\ludvig\\'
+    local_dir = 'C:\\Users\\ludvi\\programming\\EPFL\\COM-514\\project_ours\\DiffuserCam\\plots\\whole_dataset\\l2\\'
     ######### UNCOMMENT THE YOUR LINES OF CODE #########
     ## Iskander's code
     # modes = ['huber']
@@ -128,19 +124,11 @@ def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
     """
     ## Ludvig's code
     modes = ['ridge']
-    lambdas = [2e-8, 5e-8, 8e-8,
-               2e-7, 5e-7, 8e-7,
-               2e-6, 5e-6, 8e-6,
-               2e-5, 5e-5, 8e-5,
-               2e-4, 5e-4, 8e-4,
-               2e-3, 5e-3, 8e-3,
-               2e-2, 5e-2, 8e-2,
-               2e-1, 5e-1, 8e-1,
-               2,    5,    8]
+    lambdas = [5e-05]
     huber_delta = [0]
-    txtfile = 'l2_metrics_flickrdata.txt'
+    txtfile = 'l2_metrics_flickrdata_whole_dataset.txt'
     """ Ludvig's command to run (stand in DiffuserCam when you run)
-    python scripts/evaluate_mirflickr_all.py --data subset_mir_flickr_dataset/l2
+    python scripts/evaluate_mirflickr_all.py --data DiffuserCam_Mirflickr_200_3011302021_11h43_seed11
     """
     ## Adrien's code
     # modes = ['lasso', 'dct', 'nnL1']
@@ -156,6 +144,7 @@ def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
     python scripts/evaluate_mirflickr_all.py --data subset_mir_flickr_dataset/l1
     """
     ################################################
+    start_total_time = time.time()
     with open(txtfile, 'a') as f:
         timestamp = datetime.now().strftime("%d-%m-%Y_%Hh%M")
         f.write("\n\n" + timestamp + "\n")
@@ -217,9 +206,9 @@ def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
                             huber_filestring = '_huber_delta_' + str(looping_delta)
 
                         explanatory_line = "File: " + bn + ", " + "mode: " + looping_mode + ", " + "lambda: " + \
-                                        str(looping_lambda) + huber_txtstring + ", " + "process time: " + str(proc_time)
+                                            str(looping_lambda) + huber_txtstring + ", " + "process time: " + str(proc_time)
                         f.writelines([explanatory_line + "\n", mse_data + "\n", psnr_data + "\n",
-                                    ssim_data + "\n", lpips_data + "\n"])
+                                      ssim_data + "\n", lpips_data + "\n"])
                         # save images in selected folder
                         iteration_variant = bn + '_' + looping_mode + '_' +  str(looping_lambda) + huber_filestring + \
                             '_proc_time_' + str(proc_time)
@@ -234,7 +223,13 @@ def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
     print("PSNR (avg)", np.mean(psnr_scores))
     print("SSIM (avg)", np.mean(ssim_scores))
     print("LPIPS (avg)", np.mean(lpips_scores))
-
+    mse_data =  "MSE: " + str(np.mean(mse_scores))
+    psnr_data = "PSNR: " + str(np.mean(psnr_scores))
+    ssim_data = "SSIM: " + str(np.mean(ssim_scores))
+    lpips_data = "LPIPS: " + str(np.mean(lpips_scores))
+    total_time = time.time() - start_total_time
+    f.writelines(["Total processing time: " + str(total_time) + "\n", "Mean scores:" + "\n", mse_data + "\n", psnr_data + "\n",
+                  ssim_data + "\n", lpips_data + "\n"])
 
 if __name__ == "__main__":
     mirflickr_dataset()
