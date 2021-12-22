@@ -104,14 +104,14 @@ def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
     ssim_scores = []
     lpips_scores = []
     ####### CHANGE TO WHERE YOU WANT YOUR OUTPUT #######
-    local_dir = 'C:\\Users\\ludvi\\programming\\EPFL\\COM-514\\project_ours\\images\\mirflickr\\adrien\\'
+    local_dir = 'C:\\Users\\Iskandar-kh\\DiffuserCam'
     ######### UNCOMMENT THE YOUR LINES OF CODE #########
     ## Iskander's code
-    # modes = ['huber']
-    # lambdas = [1e-7, 1e-6, 1e-5, 1e-4,
-    #            1e-3, 1e-2, 1e-1]
-    # huber_delta = [0.5, 1.5, 2.5, 3.5, 4.5]
-    # txtfile = 'huber_metrics_flickrdata.txt'
+    modes = ['huber']
+    lambdas = [1e-3, 1e-2, 1e-1] #[1e-7, 1e-6, 1e-5, 1e-4] 
+               
+    huber_delta = [2.5, 3.5, 4.5] #[0.5, 1.5]
+    txtfile = 'huber_metrics_flickrdata_cont.txt'
     """ Iskander's command to run (stand in DiffuserCam when you run)
     python scripts/evaluate_mirflickr_all.py --data subset_mir_flickr_dataset/nn
     """

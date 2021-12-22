@@ -163,7 +163,7 @@ def get_solver(data, psf, mode, Gop, loss, lambda1=.005, huber_delta=1.5,  accel
         raise Exception(str(mode) + ' mode not found.')
 
     if mode == 'dct':
-        solver.get_estimate = lambda : idct.adjoint(solver.iterand['iterand']).reshape(data.shape)
+        solver.get_estimate = lambda : idct(solver.iterand['iterand']).reshape(data.shape)
     elif mode in apdg_modes:
         solver.get_estimate = lambda : solver.iterand['iterand'].reshape(data.shape)
     else:
