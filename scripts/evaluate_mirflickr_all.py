@@ -104,7 +104,7 @@ def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
     ssim_scores = []
     lpips_scores = []
     ####### CHANGE TO WHERE YOU WANT YOUR OUTPUT #######
-    local_dir = 'C:\\Users\\ludvi\\programming\\EPFL\\COM-514\\project_ours\\images\\mirflickr\\adrien\\'
+    local_dir = 'C:\\Users\\ludvi\\programming\\EPFL\\COM-514\\project_ours\\images\\mirflickr\\ludvig\\'
     ######### UNCOMMENT THE YOUR LINES OF CODE #########
     ## Iskander's code
     # modes = ['huber']
@@ -130,18 +130,18 @@ def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
     python scripts/evaluate_mirflickr_all.py --data subset_mir_flickr_dataset/nn
     """
     ## Ludvig's code
-    # modes = ['ridge']
-    # lambdas = [2e-8, 5e-8, 8e-8,
-    #            2e-7, 5e-7, 8e-7,
-    #            2e-6, 5e-6, 8e-6,
-    #            2e-5, 5e-5, 8e-5,
-    #            2e-4, 5e-4, 8e-4,
-    #            2e-3, 5e-3, 8e-3,
-    #            2e-2, 5e-2, 8e-2,
-    #            2e-1, 5e-1, 8e-1,
-    #            2,    5,    8]
-    # huber_delta = [0]
-    # txtfile = 'l2_metrics_flickrdata.txt'
+    modes = ['ridge']
+    lambdas = [2e-8, 5e-8, 8e-8,
+               2e-7, 5e-7, 8e-7,
+               2e-6, 5e-6, 8e-6,
+               2e-5, 5e-5, 8e-5,
+               2e-4, 5e-4, 8e-4,
+               2e-3, 5e-3, 8e-3,
+               2e-2, 5e-2, 8e-2,
+               2e-1, 5e-1, 8e-1,
+               2,    5,    8]
+    huber_delta = [0]
+    txtfile = 'l2_metrics_flickrdata.txt'
     """ Ludvig's command to run (stand in DiffuserCam when you run)
     python scripts/evaluate_mirflickr_all.py --data subset_mir_flickr_dataset/l2
     """
