@@ -195,7 +195,7 @@ def reconstruction(
     # apgd = APGD(dim=data.size, F=ridgeF, G=None, verbose=None)  # Initialise APGD with only our functional F to minimize
     # apgd = APGD(dim=data.size, F=lassoF, G=lassoG, verbose=None)  
     # apgd = APGD(dim=data.size, F=nnF, G=nnG, verbose=None)
-    solver = Recon(data, psf, mode='huber', lambda1=1)
+    solver = Recon(data, psf, mode='ridge', lambda1=.05)
     print(f"setup time : {time.time() - start_time} s")
 
 

@@ -139,3 +139,6 @@ dmypy.json
 # Adrien's scratch files
 rgb_estimate.npy
 test.ipynb
+
+# filckr dataset
+Mirflickr

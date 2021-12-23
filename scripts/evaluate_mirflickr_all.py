@@ -101,14 +101,13 @@ def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
     ssim_scores = []
     lpips_scores = []
     ####### CHANGE TO WHERE YOU WANT YOUR OUTPUT #######
-    local_dir = 'C:\\Users\\ludvi\\programming\\EPFL\\COM-514\\project_ours\\images\\mirflickr\\ludvig\\'
+    local_dir = '../huber_recon'
     ######### UNCOMMENT THE YOUR LINES OF CODE #########
     ## Iskander's code
-    # modes = ['huber']
-    # lambdas = [1e-7, 1e-6, 1e-5, 1e-4,
-    #            1e-3, 1e-2, 1e-1]
-    # huber_delta = [0.5, 1.5, 2.5, 3.5, 4.5]
-    # txtfile = 'huber_metrics_flickrdata.txt'
+    modes = ['huber']
+    lambdas = [1e-4]
+    huber_delta = [1.5]
+    txtfile = 'huber_metrics_flickrdata.txt'
     """ Iskander's command to run (stand in DiffuserCam when you run)
     python scripts/evaluate_mirflickr_all.py --data subset_mir_flickr_dataset/nn
     """
@@ -127,18 +126,18 @@ def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
     python scripts/evaluate_mirflickr_all.py --data subset_mir_flickr_dataset/nn
     """
     ## Ludvig's code
-    modes = ['ridge']
-    lambdas = [2e-8, 5e-8, 8e-8,
-               2e-7, 5e-7, 8e-7,
-               2e-6, 5e-6, 8e-6,
-               2e-5, 5e-5, 8e-5,
-               2e-4, 5e-4, 8e-4,
-               2e-3, 5e-3, 8e-3,
-               2e-2, 5e-2, 8e-2,
-               2e-1, 5e-1, 8e-1,
-               2,    5,    8]
-    huber_delta = [0]
-    txtfile = 'l2_metrics_flickrdata.txt'
+    # modes = ['ridge']
+    # lambdas = [2e-8, 5e-8, 8e-8,
+    #            2e-7, 5e-7, 8e-7,
+    #            2e-6, 5e-6, 8e-6,
+    #            2e-5, 5e-5, 8e-5,
+    #            2e-4, 5e-4, 8e-4,
+    #            2e-3, 5e-3, 8e-3,
+    #            2e-2, 5e-2, 8e-2,
+    #            2e-1, 5e-1, 8e-1,
+    #            2,    5,    8]
+    # huber_delta = [0]
+    # txtfile = 'l2_metrics_flickrdata.txt'
     """ Ludvig's command to run (stand in DiffuserCam when you run)
     python scripts/evaluate_mirflickr_all.py --data subset_mir_flickr_dataset/l2
     """
@@ -207,6 +206,9 @@ def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
                         ssim_data = "SSIM: " + str(ssim_scores[-1])
                         lpips_data = "LPIPS: " + str(lpips_scores[-1])
 
+                        with open(txtfile[:-3] + 'csv', 'a') as fi:
+                            fi.write(', '.join([str(mse_scores[-1]), str(psnr_scores[-1]), str(ssim_scores[-1]), str(lpips_scores[-1]), looping_mode, str(looping_lambda), str(looping_delta)]))
+                        
                         # handle extra parameter with Huber
                         if looping_delta == 0:
                             huber_txtstring = ""
@@ -215,6 +217,7 @@ def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
                             f.write("\n")
                             huber_txtstring = ", Huber delta: " + str(looping_delta)
                             huber_filestring = '_huber_delta_' + str(looping_delta)
+
 
                         explanatory_line = "File: " + bn + ", " + "mode: " + looping_mode + ", " + "lambda: " + \
                                         str(looping_lambda) + huber_txtstring + ", " + "process time: " + str(proc_time)
