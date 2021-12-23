@@ -128,7 +128,7 @@ def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
     huber_delta = [0]
     txtfile = 'l2_metrics_flickrdata_whole_dataset.txt'
     """ Ludvig's command to run (stand in DiffuserCam when you run)
-    python scripts/evaluate_mirflickr_all.py --data DiffuserCam_Mirflickr_200_3011302021_11h43_seed11
+    python scripts/evaluate_mirflickr_all.py --data DiffuserCam_Mirflickr_200_3011302021_11h43_seed11/DiffuserCam_Mirflickr_200_3011302021_11h43_seed11
     """
     ## Adrien's code
     # modes = ['lasso', 'dct', 'nnL1']
@@ -147,7 +147,7 @@ def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
     start_total_time = time.time()
     with open(txtfile, 'a') as f:
         timestamp = datetime.now().strftime("%d-%m-%Y_%Hh%M")
-        f.write("\n\n" + timestamp + "\n")
+        f.write(timestamp + "\n")
         for fn in files:
             f.write("\n")
             for looping_mode in modes:
@@ -215,21 +215,22 @@ def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
                         iteration_variant = iteration_variant.replace('.', '_')
                         plt.savefig(local_dir + iteration_variant + '.tiff')
                         plt.close('all')
+        print("\nMSE (avg)", np.mean(mse_scores))
+        print("PSNR (avg)", np.mean(psnr_scores))
+        print("SSIM (avg)", np.mean(ssim_scores))
+        print("LPIPS (avg)", np.mean(lpips_scores))
+        mse_data =  "MSE: " + str(np.mean(mse_scores))
+        psnr_data = "PSNR: " + str(np.mean(psnr_scores))
+        ssim_data = "SSIM: " + str(np.mean(ssim_scores))
+        lpips_data = "LPIPS: " + str(np.mean(lpips_scores))
+        total_time = time.time() - start_total_time
+        f.writelines(["Total processing time: " + str(total_time) + "\n", "Mean scores:" + "\n", mse_data + "\n", psnr_data + "\n",
+                      ssim_data + "\n", lpips_data + "\n"])
 
     if save:
         print(f"\nReconstructions saved to : {save}")
 
-    print("\nMSE (avg)", np.mean(mse_scores))
-    print("PSNR (avg)", np.mean(psnr_scores))
-    print("SSIM (avg)", np.mean(ssim_scores))
-    print("LPIPS (avg)", np.mean(lpips_scores))
-    mse_data =  "MSE: " + str(np.mean(mse_scores))
-    psnr_data = "PSNR: " + str(np.mean(psnr_scores))
-    ssim_data = "SSIM: " + str(np.mean(ssim_scores))
-    lpips_data = "LPIPS: " + str(np.mean(lpips_scores))
-    total_time = time.time() - start_total_time
-    f.writelines(["Total processing time: " + str(total_time) + "\n", "Mean scores:" + "\n", mse_data + "\n", psnr_data + "\n",
-                  ssim_data + "\n", lpips_data + "\n"])
+
 
 if __name__ == "__main__":
     mirflickr_dataset()
