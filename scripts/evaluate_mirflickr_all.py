@@ -98,14 +98,14 @@ def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
     lpips_scores = []
     ####### CHANGE TO WHERE YOU WANT YOUR OUTPUT #######
 
-    local_dir = '../huber_recon'
+    local_dir = '../all_recon'
     
     ######### UNCOMMENT THE YOUR LINES OF CODE #########
     ## Iskander's code
-    modes = ['huber']
-    lambdas = [1e-4]
-    huber_delta = [1.5]
-    txtfile = 'huber_metrics_flickrdata.txt'
+    # modes = ['huber']
+    # lambdas = [1e-4]
+    # huber_delta = [1.5]
+    # txtfile = 'huber_metrics_flickrdata.txt'
     """ Iskander's command to run (stand in DiffuserCam when you run)
     python scripts/evaluate_mirflickr_all.py --data subset_mir_flickr_dataset/nn
     """
@@ -140,15 +140,15 @@ def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
     python scripts/evaluate_mirflickr_all.py --data DiffuserCam_Mirflickr_200_3011302021_11h43_seed11/DiffuserCam_Mirflickr_200_3011302021_11h43_seed11
     """
     ## Adrien's code
-    # modes = ['lasso', 'dct', 'nnL1']
-    # lambdas = [5e-8, 2e-7,
-    #            9e-7, 6e-6,
-    #            3e-5, 1e-4,
-    #            8e-4, 5e-3,
-    #            2e-2, 9e-2,
-    #            7e-1]
-    # huber_delta = [0]
-    # txtfile = 'l1_metrics_flickrdata.txt'
+    modes = ['lasso', 'dct', 'nnL1', 'huber']
+    varlambda = {'lasso': .001,
+                'dct': .005,
+                'huber': 1,
+                'nnL1': .01
+    }
+    lambdas = [None]
+    huber_delta = [0.0055]
+    txtfile = 'all_metrics_flickrdata.txt'
     """ Adrien's command to run (stand in DiffuserCam when you run)
     python scripts/evaluate_mirflickr_all.py --data subset_mir_flickr_dataset/l1
     """
@@ -164,6 +164,7 @@ def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
                 for looping_lambda in lambdas:
                     f.write("\n")
                     for looping_delta in huber_delta:
+                        looping_lambda = varlambda[looping_mode]
                         start_time = time.time()
                         bn = os.path.basename(fn).split(".")[0]
                         print(f"\n{bn}")
@@ -206,7 +207,7 @@ def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
                         lpips_data = "LPIPS: " + str(lpips_scores[-1])
 
                         with open(txtfile[:-3] + 'csv', 'a') as fi:
-                            fi.write(', '.join([str(mse_scores[-1]), str(psnr_scores[-1]), str(ssim_scores[-1]), str(lpips_scores[-1]), looping_mode, str(looping_lambda), str(looping_delta)]))
+                            fi.write(', '.join([str(mse_scores[-1]), str(psnr_scores[-1]), str(ssim_scores[-1]), str(lpips_scores[-1]),str(proc_time), looping_mode, str(looping_lambda), str(looping_delta)])+'\n')
                         
                         # handle extra parameter with Huber
                         if looping_delta == 0:
