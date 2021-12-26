@@ -141,9 +141,7 @@ def get_solver(data, psf, mode, Gop, loss, lambda1=.005, huber_delta=1.5,  accel
     dctG = lambda1 * L1Norm(dim=data.size)
 
     # huber
-    huberD = Gradient(shape=data.shape)
-    huberD.compute_lipschitz_cst()
-    huberF = ((1/2) * loss * Gop) + lambda1 * HuberNorm(dim = data.size, delta=huber_delta)*huberD
+    huberF = ((1/2) * loss * Gop) + lambda1 * HuberNorm(dim = D.shape[0], delta=huber_delta)*D
     huberG = NonNegativeOrthant(dim=data.size)
 
     if mode == 'ridge':
@@ -155,7 +153,7 @@ def get_solver(data, psf, mode, Gop, loss, lambda1=.005, huber_delta=1.5,  accel
     elif mode == 'dct':
         solver = APGD(dim=data.size, F=dctF, G=dctG, verbose=None, acceleration=acceleration)
     elif mode == pds_modes[0]:
-        solver = PDS(dim=data.size, F=pdsF, G=pdsG, H=dctG, K=huberD, verbose=None)
+        solver = PDS(dim=data.size, F=pdsF, G=pdsG, H=pdsH, K=D, verbose=None)
     elif mode == 'huber':
         # solver = PDS(dim=Gop.shape[1], F=huberF, G=huberG, H=huberG, K=huberK, verbose=None)
         solver = APGD(dim=data.size, F=huberF, G=huberG, verbose=None, acceleration=acceleration)
