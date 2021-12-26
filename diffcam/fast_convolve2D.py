@@ -8,21 +8,17 @@ python scripts/reconstruction_template.py --psf_fp data/psf/diffcam_rgb.png \
 """
 
 import os
-import time
 import pathlib as plib
-import click
-import matplotlib.pyplot as plt
-import numpy as np
 from datetime import datetime
-from diffcam.io import load_data
 
-from scipy.fft import rfft2, irfft2, ifftshift 
-
+import click
+import numpy as np
 from pycsou.core import LinearOperator
-from pycsou.opt import APGD
-from pycsou.func import SquaredL2Loss, L1Norm
 from pycsou.linop.base import PyLopLinearOperator
 from pylops import LinearOperator
+from scipy.fft import ifftshift, irfft2, rfft2
+
+from diffcam.io import load_data
 
 
 @click.command()
@@ -172,33 +168,6 @@ def reconstruction(
         save = plib.Path(__file__).parent / save
         save.mkdir(exist_ok=False)
 
-    # varlambda = 0.00001
-    # print("Now we start")
-    # start_time = time.time()
-    # Gop = FastConvolve2D(size=data.size, filter=psf, shape=data.shape)
-    # # an example of implementation using the FastConvolve2D
-    # Gop.compute_lipschitz_cst()
-    # loss = SquaredL2Loss(dim=data.size, data=data.flatten())
-    # idct = reconstruct_dct.IDCT(shape=[data.size,data.size])
-    # idct.compute_lipschitz_cst()
-    # F_func = (1/2) * loss * Gop * idct
-    # lassoG = varlambda * L1Norm(dim=data.size)
-    # apgd = APGD(dim=data.size, F=F_func, G=lassoG, verbose=None, max_iter=10)
-    
-    # allout = apgd.iterate() # Run APGD
-    # out, _, _ = allout
-    # plt.figure()
-    # print('out',type(out['iterand']))
-    # estimate = idct(out['iterand']).reshape(data.shape)
-    # print('estimate',estimate.shape)
-    # plt.imshow(estimate)
-    # print(f"proc time : {time.time() - start_time} s")
-    # if not no_plot:
-    #     plt.show()
-    # if save:
-    #     print(f"Files saved to : {save}")
-    # print(f"Time for FastConvolve2D: {time.time() - start_time} s")
-
 class pylopsFastConvolveND(LinearOperator):
     def __init__(self, N, h, dims, dtype='float64'):
         """
@@ -232,9 +201,9 @@ class pylopsFastConvolveND(LinearOperator):
         self.dtype = np.dtype(dtype)
         self.explicit = False
         # extra for the fft_filter
-        pad_width = int(h.shape[0]/2)  # length of padding left/right of the 2-D array
-        pad_height = int(h.shape[1]/2)  # length of padding top/bottom of the 2-D array
-        padded_h = np.pad(h, ((pad_width, pad_width),(pad_height,pad_height)))
+        self.pad_width = int(h.shape[0]/2)  # length of padding left/right of the 2-D array
+        self.pad_height = int(h.shape[1]/2)  # length of padding top/bottom of the 2-D array
+        padded_h = np.pad(h, ((self.pad_width, self.pad_width),(self.pad_height,self.pad_height)))
         self.fft = rfft2(padded_h, axes=(0, 1))
         self.pad_matrix = np.zeros(shape=padded_h.shape, dtype=float)
         
@@ -254,11 +223,9 @@ class pylopsFastConvolveND(LinearOperator):
         """
         x = np.reshape(x, self.dims)
         padded_x = self.pad_matrix
-        width_pad = int(x.shape[0]/2)
-        height_pad = int(x.shape[1]/2)
-        padded_x[width_pad:3*width_pad, height_pad:3*height_pad] = x
+        padded_x[self.pad_width:3*self.pad_width, self.pad_height:3*self.pad_height] = x
         y = ifftshift(irfft2(self.fft * rfft2(padded_x, axes=(0, 1)), axes=(0, 1),),axes=(0, 1),)
-        y = y[width_pad:3*width_pad, height_pad:3*height_pad]
+        y = y[self.pad_width:3*self.pad_width, self.pad_height:3*self.pad_height]
         y = y.ravel()
         return y
 
@@ -278,11 +245,9 @@ class pylopsFastConvolveND(LinearOperator):
         """
         x = np.reshape(x, self.dims)
         padded_x = self.pad_matrix
-        width_pad = int(x.shape[0]/2)
-        height_pad = int(x.shape[1]/2)
-        padded_x[width_pad:3*width_pad, height_pad:3*height_pad] = x
+        padded_x[self.pad_width:3*self.pad_width, self.pad_height:3*self.pad_height] = x
         y = ifftshift(irfft2(np.conj(self.fft) * rfft2(padded_x, axes=(0, 1)), axes=(0, 1)),axes=(0, 1),)
-        y = y[width_pad:3*width_pad, height_pad:3*height_pad]
+        y = y[self.pad_width:3*self.pad_width, self.pad_height:3*self.pad_height]
         y = y.ravel()
         return y
 
