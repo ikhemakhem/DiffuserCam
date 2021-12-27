@@ -1,0 +1,30 @@
+27-12-2021_09h14
+
+im7717, Processing time: 74.0512306690216
+im7717, Processing time: 83.08209037780762
+im7717, Processing time: 101.663259267807
+im7717, Processing time: 102.80629301071167
+im7951, Processing time: 105.13636326789856
+im7951, Processing time: 109.79647874832153
+im7951, Processing time: 142.07088661193848
+im7951, Processing time: 137.46775150299072
+im8237, Processing time: 99.53917860984802
+im8237, Processing time: 107.98413920402527
+im8237, Processing time: 116.92078852653503
+im8237, Processing time: 116.40465521812439
+Total processing time FastConvolve2D: 1296.92311501503
+27-12-2021_09h44
+
+im7717, Processing time: 93.57752799987793
+im7717, Processing time: 93.63916182518005
+im7717, Processing time: 125.9180178642273
+im7717, Processing time: 124.82937121391296
+im7951, Processing time: 128.59775233268738
+im7951, Processing time: 137.46021151542664
+im7951, Processing time: 175.0459234714508
+im7951, Processing time: 186.76144909858704
+im8237, Processing time: 142.61555576324463
+im8237, Processing time: 154.45685720443726
+im8237, Processing time: 184.4558184146881
+im8237, Processing time: 175.91560459136963
+Total processing time Convolve2D: 1723.2732512950897
