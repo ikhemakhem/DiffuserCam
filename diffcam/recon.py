@@ -3,12 +3,11 @@ import numpy as np
 import pathlib as plib
 import matplotlib.pyplot as plt
 from scipy.fftpack import next_fast_len
-from scipy.fft import dctn, idctn
 from diffcam.plot import plot_image
-from pycsou.linop import Gradient, Convolve2D, IdentityOperator
+from pycsou.linop import Gradient
 from pycsou.opt import APGD, PDS
-from pycsou.func import SquaredL2Loss, SquaredL2Norm, Segment, L1Norm, NonNegativeOrthant
-from diffcam.custom_ops import DCT, IDCT, HuberNorm
+from pycsou.func import SquaredL2Loss, SquaredL2Norm, L1Norm, NonNegativeOrthant
+from diffcam.custom_ops import IDCT, HuberNorm
 from diffcam.fast_convolve2D import FastConvolve2D
 
 class ReconstructionAlgorithm(abc.ABC):
@@ -116,46 +115,47 @@ def get_solver(data, psf, mode, Gop, loss, lambda1=.005, huber_delta=1.5,  accel
     pds_modes = ['nnL1']
 
     Gop.compute_lipschitz_cst()
-    # we should have F = 1/2 * ‖y − Hx‖ + λ‖x‖      with ‖.‖ squared L2 norm
+    # Tikhonov regularization (squaredL2norm is differentiable)
     ridgeF = ((1/2) * loss * Gop) + (lambda1 * SquaredL2Norm(dim=data.size))
-    # lasso, same but l1 norm (non diffirentiable)
+
+    # lasso regularization (same but l1 norm (non diffirentiable))
     lassoF = ((1/2) * loss * Gop)
     lassoG = lambda1 * L1Norm(dim=data.size)
-    # non-negative least square, same but non-negativity prior (non diffirentiable)
+
+    # non-negative prior (non diffirentiable)
     nnF = lassoF
     nnG = NonNegativeOrthant(dim=data.size) # lambda1 should have no effect in this case
 
-    # whatever the pds one was called
+    # Gradient oprator for TV-regularization and huber regularization
     D = Gradient(shape=data.shape)
     D.compute_lipschitz_cst()
-    mu = lambda1 #* np.max(D(Gop.adjoint(data.flatten()))) # Penalty strength
 
+    # Total-Variation and non-negative regularization (both proximable)
     pdsF = ((1/2) * loss * Gop)
     pdsG = NonNegativeOrthant(dim=data.size)
-    pdsH = mu * L1Norm(dim=D.shape[0])
+    pdsH = lambda1 * L1Norm(dim=D.shape[0])
 
-    # dct
+    # Lasso with DCT
     idct = IDCT(shape=[data.size,data.size])
     idct.compute_lipschitz_cst()
     dctF = (1/2) * loss * Gop * idct
     dctG = lambda1 * L1Norm(dim=data.size)
 
-    # huber
+    # Huber Regularization
     huberF = ((1/2) * loss * Gop) + lambda1 * HuberNorm(dim = D.shape[0], delta=huber_delta)*D
     huberG = NonNegativeOrthant(dim=data.size)
 
     if mode == 'ridge':
-        solver = APGD(dim=data.size, F=ridgeF, G=None, verbose=None, acceleration=acceleration)  # Initialise APGD with only our functional F to minimize
+        solver = APGD(dim=data.size, F=ridgeF, G=None, verbose=None, acceleration=acceleration) 
     elif mode == 'lasso':
         solver = APGD(dim=data.size, F=lassoF, G=lassoG, verbose=None, acceleration=acceleration) 
     elif mode == 'nn':
         solver = APGD(dim=data.size, F=nnF, G=nnG, verbose=None, acceleration=acceleration)
     elif mode == 'dct':
         solver = APGD(dim=data.size, F=dctF, G=dctG, verbose=None, acceleration=acceleration)
-    elif mode == pds_modes[0]:
+    elif mode == pds_modes[0]: #nnL1
         solver = PDS(dim=data.size, F=pdsF, G=pdsG, H=pdsH, K=D, verbose=None)
     elif mode == 'huber':
-        # solver = PDS(dim=Gop.shape[1], F=huberF, G=huberG, H=huberG, K=huberK, verbose=None)
         solver = APGD(dim=data.size, F=huberF, G=huberG, verbose=None, acceleration=acceleration)
     else:
         raise Exception(str(mode) + ' mode not found.')
@@ -172,7 +172,7 @@ def get_solver(data, psf, mode, Gop, loss, lambda1=.005, huber_delta=1.5,  accel
 
 class Recon():
     def __init__(self, data, psf, mode, lambda1=.005, huber_delta=1.5, color=True):
-        assert color #this was not a question.
+        assert color 
         data = {'r': data[:,:,0], 'g': data[:,:,1], 'b': data[:,:,2]}
         psf = {'r': psf[:,:,0], 'g': psf[:,:,1], 'b': psf[:,:,2]}
 
