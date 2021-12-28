@@ -1,21 +1,21 @@
 import numpy as np
 from numpy.fft import fft2, ifft2, ifftshift
 
+
 def autocorr2d(vals, pad_mode="reflect"):
     """
     Compute 2-D autocorrelation of image via the FFT.
 
     Parameters
     ----------  
-    vals : py:class:`~numpy.ndarray`
+    vals : np.ndarray
         2-D image.
     pad_mode : str
         Desired padding. See NumPy documentation:
             https://numpy.org/doc/stable/reference/generated/numpy.pad.html
-
     Return
     ------
-    autocorr : py:class:`~numpy.ndarray`
+    autocorr : np.ndarray
     """
     pad_width = int(vals.shape[0]/2)  # length of padding left/right of the 2-D array
     pad_height = int(vals.shape[1]/2)  # length of padding top/bottom of the 2-D array

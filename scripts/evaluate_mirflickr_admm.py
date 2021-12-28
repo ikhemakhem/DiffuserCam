@@ -12,6 +12,7 @@ python scripts/evaluate_mirflickr_admm.py \
 """
 
 import glob
+import time
 import os
 import pathlib as plib
 import click
@@ -97,41 +98,68 @@ def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
     psnr_scores = []
     ssim_scores = []
     lpips_scores = []
-    for fn in files:
+    start_total_time = time.time()
+    mode = "admm"
+    mu1=1e-6
+    mu2=1e-5
+    mu3=4e-5
 
-        bn = os.path.basename(fn).split(".")[0]
-        print(f"\n{bn}")
+    txtfile = "metricsdata\\admm_metrics_flickrdata.txt"
+    with open(txtfile, 'a') as f:
+        timestamp = datetime.now().strftime("%d-%m-%Y_%Hh%M")
+        f.write(timestamp)
+        for fn in files:
+            start_time = time.time()
+            f.write("\n")
+            bn = os.path.basename(fn).split(".")[0]
+            print(f"\n{bn}")
 
-        # load diffuser data
-        lensless_fp = os.path.join(diffuser_dir, fn)
-        diffuser = np.load(lensless_fp)
-        diffuser_prep = diffuser - background
-        diffuser_prep = np.clip(diffuser_prep, a_min=0, a_max=1)
-        diffuser_prep /= np.linalg.norm(diffuser_prep.ravel())
-        recon.set_data(diffuser_prep)
-        est = recon.apply(n_iter=n_iter, plot=False)
+            # load diffuser data
+            lensless_fp = os.path.join(diffuser_dir, fn)
+            diffuser = np.load(lensless_fp)
+            diffuser_prep = diffuser - background
+            diffuser_prep = np.clip(diffuser_prep, a_min=0, a_max=1)
+            diffuser_prep /= np.linalg.norm(diffuser_prep.ravel())
+            recon.set_data(diffuser_prep)
+            est = recon.apply(n_iter=n_iter, plot=False)
 
-        if save:
-            np.save(os.path.join(save, f"{bn}.npy"), est)
-            # viewable data
-            output_fn = os.path.join(save, f"{bn}.tif")
-            est_norm = est / est.max()
-            image_data = (est_norm * 255).astype(np.uint8)
-            im = Image.fromarray(image_data)
-            im.save(output_fn)
+            if save:
+                np.save(os.path.join(save, f"{bn}.npy"), est)
+                # viewable data
+                output_fn = f"plots\\whole_dataset\\admm\\{fn}.tiff"
+                est_norm = est / est.max()
+                image_data = (est_norm * 255).astype(np.uint8)
+                im = Image.fromarray(image_data)
+                im.save(output_fn)
 
-        # compute scores
-        lensed_fp = os.path.join(lensed_dir, fn)
-        lensed = np.load(lensed_fp)
-        lensed = postprocess(lensed)
-        mse_scores.append(mse(lensed, est))
-        psnr_scores.append(psnr(lensed, est))
-        ssim_scores.append(ssim(lensed, est))
-        lpips_scores.append(lpips(lensed, est))
-        print(mse_scores[-1])
-        print(psnr_scores[-1])
-        print(ssim_scores[-1])
-        print(lpips_scores[-1])
+            # compute scores
+            lensed_fp = os.path.join(lensed_dir, fn)
+            lensed = np.load(lensed_fp)
+            lensed = postprocess(lensed)
+            mse_scores.append(mse(lensed, est))
+            psnr_scores.append(psnr(lensed, est))
+            ssim_scores.append(ssim(lensed, est))
+            lpips_scores.append(lpips(lensed, est))
+            proc_time = time.time() - start_time
+            with open(txtfile[:-3] + 'csv', 'a') as fi:
+                fi.write(', '.join([str(mse_scores[-1]), str(psnr_scores[-1]), str(ssim_scores[-1]),
+                                    str(lpips_scores[-1]), str(proc_time), mode, str(mu1), str(mu2), 
+                                    str(mu3)])+'\n')
+            mse_data =  "MSE: " + str(mse_scores[-1])
+            psnr_data = "PSNR: " + str(psnr_scores[-1])
+            ssim_data = "SSIM: " + str(ssim_scores[-1])
+            lpips_data = "LPIPS: " + str(lpips_scores[-1])
+            explanatory_line = "File: " + bn + ", mode: " + mode + ", mu1: " + \
+                    str(mu1) + ", mu2: " + str(mu2) + ", mu3: " + str(mu3) + ", process time: " + str(proc_time)
+            f.writelines([explanatory_line + "\n", mse_data + "\n", psnr_data + "\n",
+                          ssim_data + "\n", lpips_data + "\n"])
+        mse_data =  "MSE: " + str(np.mean(mse_scores))
+        psnr_data = "PSNR: " + str(np.mean(psnr_scores))
+        ssim_data = "SSIM: " + str(np.mean(ssim_scores))
+        lpips_data = "LPIPS: " + str(np.mean(lpips_scores))
+        total_time = time.time() - start_total_time
+        f.writelines(["Total processing time: " + str(total_time) + "\n", "Mean scores:" + "\n", mse_data + "\n", psnr_data + "\n",
+                      ssim_data + "\n", lpips_data + "\n"])
 
     if save:
         print(f"\nReconstructions saved to : {save}")

@@ -1,14 +1,18 @@
 import abc
-import numpy as np
 import pathlib as plib
+
 import matplotlib.pyplot as plt
-from scipy.fftpack import next_fast_len
-from diffcam.plot import plot_image
+import numpy as np
+from pycsou.func import (L1Norm, NonNegativeOrthant, SquaredL2Loss,
+                         SquaredL2Norm)
 from pycsou.linop import Gradient
 from pycsou.opt import APGD, PDS
-from pycsou.func import SquaredL2Loss, SquaredL2Norm, L1Norm, NonNegativeOrthant
+from scipy.fftpack import next_fast_len
+
 from diffcam.custom_ops import IDCT, HuberNorm
 from diffcam.fast_convolve2D import FastConvolve2D
+from diffcam.plot import plot_image
+
 
 class ReconstructionAlgorithm(abc.ABC):
     def __init__(self, psf, dtype=np.float32):
@@ -110,7 +114,34 @@ class ReconstructionAlgorithm(abc.ABC):
         else:
             return final_im
 
-def get_solver(data, psf, mode, Gop, loss, lambda1=.005, huber_delta=1.5,  acceleration='CD'):
+def get_solver(data, mode, Gop, loss, lambda1=.005, huber_delta=1.5,  acceleration='CD'):
+    """
+    Gets iterative solver.
+    Parameters
+    ----------
+    data : np.ndarray
+        Raw data measured.
+    mode : string
+        Type of reconstruction to be implemented.
+    Gop : np.ndarray
+        Convolution between psf and raw data.
+    loss : np.ndarray
+        Squared l2-loss functional of raw data.
+    lambda1 : float, optional
+        Hyperparameter in various reconstruction methods.
+    huber_delta : float, optional
+        Hyperparameter in the reconstruction method using the Huber norm.
+    color : bool, optional
+        If true, the reconstruction is in RGB. If false, reconstruction is in grayscale.
+    Raises
+    ------
+    ValueError
+        Given mode does not correspond to an implemented reconstruction method.
+    Returns
+    -------
+    REMAINS TO BE ADDED
+
+    """
     apdg_modes = ['ridge', 'lasso', 'nn', 'dct', 'huber']
     pds_modes = ['nnL1']
 
@@ -171,7 +202,32 @@ def get_solver(data, psf, mode, Gop, loss, lambda1=.005, huber_delta=1.5,  accel
     return solver
 
 class Recon():
+    """
+    The class can be used for linear inverse image reconstructions. The class supports various
+    modes. The approach of the linear inverse image reconstruction is via a point spread function
+    (PSF). Images can be reconstructed both in the RGB channels and in grayscale.
+    """
     def __init__(self, data, psf, mode, lambda1=.005, huber_delta=1.5, color=True):
+        """
+        Parameters
+        ----------
+        data : np.ndarray
+            Raw data measured.
+        psf : np.ndarray
+            Point spread function of camera.
+        mode : string
+            Type of reconstruction to be implemented.
+        lambda1 : float, optional
+            Hyperparameter in various reconstruction methods.
+        huber_delta : float, optional
+            Hyperparameter in the reconstruction method using the Huber norm.
+        color : bool, optional
+            If true, the reconstruction is in RGB. If false, reconstruction is in grayscale.
+        Returns
+        -------
+        None.
+
+        """
         assert color 
         data = {'r': data[:,:,0], 'g': data[:,:,1], 'b': data[:,:,2]}
         psf = {'r': psf[:,:,0], 'g': psf[:,:,1], 'b': psf[:,:,2]}
@@ -179,10 +235,19 @@ class Recon():
         Gop = {key: FastConvolve2D(size=data[key].size, filter=psf[key], shape=data[key].shape) for key in psf}
         loss = {key: SquaredL2Loss(dim=data[key].size, data=data[key].flatten()) for key in data}
 
-        self.solver = {key: get_solver(data[key], psf[key], mode, Gop[key], loss[key], lambda1, huber_delta) for key in data}
+        self.solver = {key: get_solver(data[key], mode, Gop[key], loss[key], lambda1, huber_delta) for key in data}
 
 
     def iterate(self):
+        """
+        Parameters
+        ----------
+        None.
+        Returns
+        -------
+        out : list
+            REMAINS TO BE ADDED
+        """
         out = []
         for key in self.solver:
             out.append(self.solver[key].iterate())
@@ -190,6 +255,15 @@ class Recon():
         return out
 
     def get_estimate(self):
+        """
+        Parameters
+        ----------
+        None.
+        Returns
+        -------
+        to_return : np.ndarray
+            REMAINS TO BE ADDED
+        """
         estimate = np.array([self.solver[key].get_estimate() for key in self.solver])
         to_return = np.empty((estimate.shape[1], estimate.shape[2], estimate.shape[0]))
         to_return[:,:,0] = estimate[0]

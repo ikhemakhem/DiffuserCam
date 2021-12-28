@@ -39,12 +39,6 @@ from PIL import Image
     help="Number of files to apply reconstruction on. Default is apply on all.",
 )
 @click.option(
-    "--n_iter",
-    type=int,
-    default=100,
-    help="Number of iterations.",
-)
-@click.option(
     "--single_psf",
     is_flag=True,
     help="Whether to take PSF as sum of RGB channels.",
@@ -54,7 +48,24 @@ from PIL import Image
     is_flag=True,
     help="Whether to save reconstructions.",
 )
-def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
+def mirflickr_dataset(data, n_files, single_psf, save):
+    """
+    This function is used for hyperparameter tuning, metrics calculation and reconstruction of 
+    images.
+    Parameters
+    ----------
+    data : np.ndarray
+        Raw data measured.
+    n_files : int
+        Number of files of raw data to reconstruct. Equals the number of performed reconstructions.
+    single_psf : bool
+        Whether to take PSF as sum of RGB channels.
+    save : bool
+        Whether to save reconstructions.
+    Returns
+    -------
+    None.
+    """
     assert data is not None
 
     dataset_dir = os.path.join(data, "dataset")
@@ -97,12 +108,10 @@ def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
     ssim_scores = []
     lpips_scores = []
     ####### CHANGE TO WHERE YOU WANT YOUR OUTPUT #######
-
     local_dir = '../all_recon'
-    
     ######### UNCOMMENT THE YOUR LINES OF CODE #########
     ## Iskander's code
-    modes = ['huber']
+    modes = ['dct']
     lambdas = [1e-7, 
                 1e-6, 
                 1e-5, 
@@ -182,7 +191,7 @@ def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
                     diffuser_prep /= np.linalg.norm(diffuser_prep.ravel())
 
                     solver = Recon(diffuser_prep, psf_float, mode=looping_mode, lambda1=looping_lambda, huber_delta = looping_delta)
-                    allout = solver.iterate()
+                    _ = solver.iterate()
                     est = solver.get_estimate()
 
                     if save:

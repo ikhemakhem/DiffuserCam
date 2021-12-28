@@ -1,13 +1,3 @@
-"""
-Download data from here: https://drive.switch.ch/index.php/s/vmAZzryGI8U8rcE
-Or full dataset here: https://github.com/Waller-Lab/LenslessLearning
-```
-python scripts/evaluate_mirflickr_admm.py \
---data DiffuserCam_Mirflickr_200_3011302021_11h43_seed11 \
---n_files 10 --save
-```
-"""
-
 import glob
 import os
 import time
@@ -16,6 +6,7 @@ from datetime import datetime
 import click
 import numpy as np
 from diffcam.io import load_psf
+from diffcam.recon import Recon
 
 
 @click.command()
@@ -31,22 +22,25 @@ from diffcam.io import load_psf
     help="Number of files to apply reconstruction on. Default is apply on all.",
 )
 @click.option(
-    "--n_iter",
-    type=int,
-    default=100,
-    help="Number of iterations.",
-)
-@click.option(
     "--single_psf",
     is_flag=True,
     help="Whether to take PSF as sum of RGB channels.",
 )
-@click.option(
-    "--save",
-    is_flag=True,
-    help="Whether to save reconstructions.",
-)
-def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
+def mirflickr_dataset(data, n_files, single_psf):
+    """
+    This function is used for benchmarking of the two operators Convolve2D and FastConvolve2D.
+    Parameters
+    ----------
+    data : np.ndarray
+        Raw data measured.
+    n_files : int
+        Number of files of raw data to reconstruct. Equals the number of performed reconstructions.
+    single_psf : bool
+        Whether to take PSF as sum of RGB channels.
+    Returns
+    -------
+    None.
+    """
     assert data is not None
 
     dataset_dir = os.path.join(data, "dataset")
@@ -103,8 +97,8 @@ def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
                     diffuser_prep /= np.linalg.norm(diffuser_prep.ravel())
                     start_time = time.time()
                     solver = Recon(diffuser_prep, psf_float, mode=looping_mode, lambda1=looping_lambda)
-                    allout = solver.iterate()
-                    est = solver.get_estimate()
+                    _ = solver.iterate()
+                    _ = solver.get_estimate()
                     proc_time = time.time() - start_time
                     total_time += proc_time           
                     f.write("\n" + bn + ", Processing time: " + str(proc_time))

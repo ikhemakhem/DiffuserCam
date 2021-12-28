@@ -15,8 +15,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime
 from diffcam.io import load_data
-from recon import Recon
-from plot import plot_image
+from diffcam.recon import Recon
+from diffcam.plot import plot_image
 
 @click.command()
 @click.option(
@@ -174,7 +174,7 @@ def reconstruction(
 
     start_time = time.time()
     
-    allout = solver.iterate() 
+    _ = solver.iterate() 
     plt.figure()
     estimate = solver.get_estimate()
     np.save('rgb_estimate.npy', estimate)

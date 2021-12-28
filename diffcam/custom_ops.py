@@ -1,7 +1,8 @@
+import numpy as np
 from pycsou.core import LinearOperator
 from pycsou.func import DifferentiableFunctional
-import numpy as np
 from scipy.fft import dctn, idctn
+
 
 class DCT(LinearOperator):
     """
@@ -9,10 +10,38 @@ class DCT(LinearOperator):
     (Inverse Discrete Fourier Transform). This implemenation supports the multidimensional
     DCT.
     """
-    def __call__(self, x: np.ndarray, my_type = 2, my_norm = 'ortho') -> np.ndarray:
-        return dctn(x, type=my_type, norm = my_norm)
+    def __call__(self, x: np.ndarray, type = 2, norm = 'ortho') -> np.ndarray:
+        """
+        Parameters
+        ----------
+        x : np.ndarray
+            The input array.
+        type : int
+            Type of the DCT.
+        norm : string
+            Normalization mode.
+        Returns
+        -------
+        y : np.ndarray
+            The transformed input array.
+        """
+        return dctn(x, type=type, norm = norm)
 
     def adjoint(self, y: np.ndarray, my_type = 2, my_norm = 'ortho') -> np.ndarray:
+        """
+        Parameters
+        ----------
+        y : np.ndarray
+            The input array.
+        type : int
+            Type of the IDCT.
+        norm : string
+            Normalization mode.
+        Returns
+        -------
+        x : np.ndarray
+            The transformed input array.
+        """
         return idctn(y, type=my_type, norm = my_norm)
 
 class IDCT(LinearOperator):
@@ -21,11 +50,39 @@ class IDCT(LinearOperator):
     (Discrete Fourier Transform). This implemenation supports the multidimensional
     IDCT.
     """
-    def __call__(self, x: np.ndarray, my_type = 2, my_norm = 'ortho') -> np.ndarray:
-        return idctn(x, type=my_type, norm = my_norm)
+    def __call__(self, x: np.ndarray, type = 2, norm = 'ortho') -> np.ndarray:
+        """
+        Parameters
+        ----------
+        x : np.ndarray
+            The input array.
+        type : int
+            Type of the IDCT.
+        norm : string
+            Normalization mode.
+        Returns
+        -------
+        y : np.ndarray
+            The transformed input array.
+        """
+        return idctn(x, type=type, norm = norm)
 
-    def adjoint(self, y: np.ndarray, my_type = 2, my_norm = 'ortho') -> np.ndarray:
-        return dctn(y, type=my_type, norm = my_norm)
+    def adjoint(self, y: np.ndarray, type = 2, norm = 'ortho') -> np.ndarray:
+        """
+        Parameters
+        ----------
+        y : np.ndarray
+            The input array.
+        type : int
+            Type of the DCT.
+        norm : string
+            Normalization mode.
+        Returns
+        -------
+        x : np.ndarray
+            The transformed input array.
+        """
+        return dctn(y, type=type, norm = norm)
 
 
 class HuberNorm(DifferentiableFunctional):
@@ -39,7 +96,8 @@ class HuberNorm(DifferentiableFunctional):
         dim : int
             Dimension of differentiable function.
         delta : float 
-            DESCRIPTION.
+            Hyperparameter which decides if the norm resembles a l1 or l2 norm the most. The higher
+            the value, the more does the norm resemble a l2 norm and vice versa. 
 
         Returns
         -------
@@ -50,16 +108,15 @@ class HuberNorm(DifferentiableFunctional):
         self.delta = delta
     def __call__(self, x: np.ndarray) -> float:
         """
-
         Parameters
         ----------
         x : np.ndarray
-            DESCRIPTION.
+            Argument which the Huber norm calculated for.
 
         Returns
         -------
         float
-            DESCRIPTION.
+            The Huber norm.
 
         """
         z = x
@@ -72,16 +129,15 @@ class HuberNorm(DifferentiableFunctional):
     
     def jacobianT(self, x: np.ndarray) -> np.ndarray:
         """
-
         Parameters
         ----------
         x : np.ndarray
-            DESCRIPTION.
+            REMAINS TO BE ADDED
 
         Returns
         -------
         grad : np.ndarray
-            DESCRIPTION.
+            The Jacobian tranpose (gradient)
 
         """
         grad = np.empty_like(x)
