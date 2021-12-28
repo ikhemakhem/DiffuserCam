@@ -40,7 +40,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from diffcam.util import rgb2gray
 from diffcam.plot import plot_image, pixel_histogram, plot_cross_section, plot_autocorr2d
-from diffcam.io import load_psf, load_image
+from diffcam.io import load_image
 
 
 @click.command()

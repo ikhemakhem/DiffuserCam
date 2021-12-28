@@ -23,7 +23,7 @@ from diffcam.mirflickr import postprocess
 from diffcam.plot import plot_image
 from diffcam.recon import Recon
 from diffcam.util import print_image_info
-from PIL import Image, ImageOps
+from PIL import Image
 
 
 @click.command()

@@ -10,20 +10,12 @@ python scripts/evaluate_mirflickr_admm.py \
 
 import glob
 import os
-import pathlib as plib
 import time
 from datetime import datetime
 
 import click
-import matplotlib.pyplot as plt
 import numpy as np
 from diffcam.io import load_psf
-from diffcam.metric import lpips, mse, psnr, ssim
-from diffcam.mirflickr import postprocess
-from diffcam.plot import plot_image
-from diffcam.recon import Recon
-from diffcam.util import print_image_info
-from PIL import Image, ImageOps
 
 
 @click.command()

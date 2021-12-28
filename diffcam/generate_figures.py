@@ -15,7 +15,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime
 from diffcam.io import load_data
-from diffcam.metric import mse, psnr, ssim, lpips
 
 from recon import Recon
 from plot import plot_image
