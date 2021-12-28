@@ -43,7 +43,7 @@ class pylopsFastConvolve2D(LinearOperator):
         padded_h = np.pad(h, ((self.pad_width, self.pad_width),(self.pad_height,self.pad_height)))
         self.fft = rfft2(padded_h, axes=(0, 1))
         self.pad_matrix = np.zeros(shape=padded_h.shape, dtype=float)
-        
+
 
     def _matvec(self, x):
         """

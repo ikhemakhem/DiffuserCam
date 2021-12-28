@@ -87,7 +87,8 @@ class IDCT(LinearOperator):
 
 class HuberNorm(DifferentiableFunctional):
     """
-    Constructs the Huber Norm of differentiable functions, where DifferentiableFunctions is the base class of differentiable functions.
+    Constructs the Huber Norm of differentiable functions, where DifferentiableFunctions is the
+    base class of differentiable functions.
     """
     def __init__(self, dim: int, delta: float):
         """
@@ -95,9 +96,9 @@ class HuberNorm(DifferentiableFunctional):
         ----------
         dim : int
             Dimension of differentiable function.
-        delta : float 
+        delta : float
             Hyperparameter which decides if the norm resembles a l1 or l2 norm the most. The higher
-            the value, the more does the norm resemble a l2 norm and vice versa. 
+            the value, the more does the norm resemble a l2 norm and vice versa.
 
         Returns
         -------
@@ -124,9 +125,9 @@ class HuberNorm(DifferentiableFunctional):
             if abs(z[i]) <= self.delta:
                 z[i] = 0.5*z[i]*z[i]
             else:
-                z[i] = self.delta*(abs(z)-self.delta/2) 
+                z[i] = self.delta*(abs(z)-self.delta/2)
         return np.sum(z)
-    
+
     def jacobianT(self, x: np.ndarray) -> np.ndarray:
         """
         Parameters

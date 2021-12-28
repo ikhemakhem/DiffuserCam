@@ -67,7 +67,7 @@ def mirflickr_dataset(data, n_files, single_psf):
         single_psf=single_psf,
     )
 
-   
+
     modes = ['nnL1', 'ridge']
     lambdas = [1e-6, 1e-3]
     txtfile = 'benchmark_FastConvolve2D.txt'
@@ -96,11 +96,12 @@ def mirflickr_dataset(data, n_files, single_psf):
                     diffuser_prep = np.clip(diffuser_prep, a_min=0, a_max=1)
                     diffuser_prep /= np.linalg.norm(diffuser_prep.ravel())
                     start_time = time.time()
-                    solver = Recon(diffuser_prep, psf_float, mode=looping_mode, lambda1=looping_lambda)
+                    solver = Recon(diffuser_prep, psf_float, mode=looping_mode,
+                                   lambda1=looping_lambda)
                     _ = solver.iterate()
                     _ = solver.get_estimate()
                     proc_time = time.time() - start_time
-                    total_time += proc_time           
+                    total_time += proc_time
                     f.write("\n" + bn + ", Processing time: " + str(proc_time))
 
         f.write("\n" + "Total processing time Convolve2D: " + str(total_time) + "\n")

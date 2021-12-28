@@ -50,7 +50,7 @@ from PIL import Image
 )
 def mirflickr_dataset(data, n_files, single_psf, save):
     """
-    This function is used for hyperparameter tuning, metrics calculation and reconstruction of 
+    This function is used for hyperparameter tuning, metrics calculation and reconstruction of
     images.
     Parameters
     ----------
@@ -102,7 +102,7 @@ def mirflickr_dataset(data, n_files, single_psf, save):
         save = "admm_mirflickr" + timestamp
         save = plib.Path(__file__).parent / save
         save.mkdir(exist_ok=False)
-   
+
     mse_scores = []
     psnr_scores = []
     ssim_scores = []
@@ -112,20 +112,21 @@ def mirflickr_dataset(data, n_files, single_psf, save):
     ######### UNCOMMENT THE YOUR LINES OF CODE #########
     ## Iskander's code
     modes = ['dct']
-    lambdas = [1e-7, 
-                1e-6, 
-                1e-5, 
-                1e-4, 
-                1e-3, 
-                1e-2, 
-                1e-1, 5e-1]
+    lambdas = [1e-7,
+               1e-6,
+               1e-5,
+               1e-4,
+               1e-3,
+               1e-2,
+               1e-1,
+               5e-1]
     ######### choose the delta to use for Huber mode ########
     huber_delta = [1.5]
     txtfile = 'metrics_flickrdata.txt'
     """  command to run (stand in DiffuserCam when you run)
     python scripts/evaluate_mirflickr_all.py --data subset_mir_flickr_dataset/nn
     """
-    
+
     ################################################
     start_total_time = time.time()
     with open(txtfile, 'a') as f:
@@ -137,7 +138,6 @@ def mirflickr_dataset(data, n_files, single_psf, save):
                 f.write("\n")
                 for looping_lambda in lambdas:
                     f.write("\n")
-                    
                     looping_delta = huber_delta[0]
                     start_time = time.time()
                     bn = os.path.basename(fn).split(".")[0]
@@ -149,7 +149,8 @@ def mirflickr_dataset(data, n_files, single_psf, save):
                     diffuser_prep = np.clip(diffuser_prep, a_min=0, a_max=1)
                     diffuser_prep /= np.linalg.norm(diffuser_prep.ravel())
 
-                    solver = Recon(diffuser_prep, psf_float, mode=looping_mode, lambda1=looping_lambda, huber_delta = looping_delta)
+                    solver = Recon(diffuser_prep, psf_float, mode=looping_mode,
+                                   lambda1=looping_lambda, huber_delta = looping_delta)
                     _ = solver.iterate()
                     est = solver.get_estimate()
 
@@ -168,7 +169,7 @@ def mirflickr_dataset(data, n_files, single_psf, save):
                     lensed = postprocess(lensed)
                     est = postprocess(est)
                     plot_image(est)
-                    
+
                     mse_scores.append(mse(lensed, est))
                     psnr_scores.append(psnr(lensed, est))
                     ssim_scores.append(ssim(lensed, est))
@@ -181,8 +182,11 @@ def mirflickr_dataset(data, n_files, single_psf, save):
                     lpips_data = "LPIPS: " + str(lpips_scores[-1])
 
                     with open(txtfile[:-3] + 'csv', 'a') as fi:
-                        fi.write(', '.join([str(mse_scores[-1]), str(psnr_scores[-1]), str(ssim_scores[-1]), str(lpips_scores[-1]),str(proc_time), looping_mode, str(looping_lambda), str(looping_delta)])+'\n')
-                    
+                        fi.write(', '.join([str(mse_scores[-1]), str(psnr_scores[-1]),
+                                            str(ssim_scores[-1]), str(lpips_scores[-1]),
+                                            str(proc_time), looping_mode, str(looping_lambda),
+                                            str(looping_delta)])+'\n')
+
                     # handle extra parameter with Huber
                     if looping_delta == 0:
                         huber_txtstring = ""
@@ -193,13 +197,14 @@ def mirflickr_dataset(data, n_files, single_psf, save):
                         huber_filestring = '_huber_delta_' + str(looping_delta)
 
 
-                    explanatory_line = "File: " + bn + ", " + "mode: " + looping_mode + ", " + "lambda: " + \
-                                        str(looping_lambda) + huber_txtstring + ", " + "process time: " + str(proc_time)
+                    explanatory_line = "File: " + bn + ", " + "mode: " + looping_mode + ", " + \
+                                       "lambda: " + str(looping_lambda) + huber_txtstring + \
+                                        ", process time: " + str(proc_time)
                     f.writelines([explanatory_line + "\n", mse_data + "\n", psnr_data + "\n",
                                     ssim_data + "\n", lpips_data + "\n"])
                     # save images in selected folder
-                    iteration_variant = bn + '_' + looping_mode + '_' +  str(looping_lambda) + huber_filestring + \
-                        '_proc_time_' + str(proc_time)
+                    iteration_variant = bn + '_' + looping_mode + '_' +  str(looping_lambda) + \
+                        huber_filestring + '_proc_time_' + str(proc_time)
                     iteration_variant = iteration_variant.replace('.', '_')
                     plt.savefig(local_dir + iteration_variant + '.tiff')
                     plt.close('all')
@@ -212,12 +217,11 @@ def mirflickr_dataset(data, n_files, single_psf, save):
         ssim_data = "SSIM: " + str(np.mean(ssim_scores))
         lpips_data = "LPIPS: " + str(np.mean(lpips_scores))
         total_time = time.time() - start_total_time
-        f.writelines(["Total processing time: " + str(total_time) + "\n", "Mean scores:" + "\n", mse_data + "\n", psnr_data + "\n",
-                      ssim_data + "\n", lpips_data + "\n"])
+        f.writelines(["Total processing time: " + str(total_time) + "\n", "Mean scores:" + "\n",
+                      mse_data + "\n", psnr_data + "\n", ssim_data + "\n", lpips_data + "\n"])
 
     if save:
         print(f"\nReconstructions saved to : {save}")
-
 
 
 if __name__ == "__main__":

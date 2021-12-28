@@ -12,17 +12,18 @@ python scripts/evaluate_mirflickr_admm.py \
 """
 
 import glob
-import time
 import os
 import pathlib as plib
-import click
+import time
 from datetime import datetime
-from diffcam.io import load_psf
+
+import click
 import numpy as np
+from diffcam.io import load_psf
+from diffcam.metric import lpips, mse, psnr, ssim
+from diffcam.mirflickr import ADMM_MIRFLICKR, postprocess
 from diffcam.util import print_image_info
 from PIL import Image
-from diffcam.mirflickr import ADMM_MIRFLICKR, postprocess
-from diffcam.metric import mse, psnr, ssim, lpips
 
 
 @click.command()
@@ -142,15 +143,16 @@ def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
             lpips_scores.append(lpips(lensed, est))
             proc_time = time.time() - start_time
             with open(txtfile[:-3] + 'csv', 'a') as fi:
-                fi.write(', '.join([str(mse_scores[-1]), str(psnr_scores[-1]), str(ssim_scores[-1]),
-                                    str(lpips_scores[-1]), str(proc_time), mode, str(mu1), str(mu2), 
-                                    str(mu3)])+'\n')
+                fi.write(', '.join([str(mse_scores[-1]), str(psnr_scores[-1]),
+                                    str(ssim_scores[-1]), str(lpips_scores[-1]), str(proc_time),
+                                    mode, str(mu1), str(mu2), str(mu3)])+'\n')
             mse_data =  "MSE: " + str(mse_scores[-1])
             psnr_data = "PSNR: " + str(psnr_scores[-1])
             ssim_data = "SSIM: " + str(ssim_scores[-1])
             lpips_data = "LPIPS: " + str(lpips_scores[-1])
             explanatory_line = "File: " + bn + ", mode: " + mode + ", mu1: " + \
-                    str(mu1) + ", mu2: " + str(mu2) + ", mu3: " + str(mu3) + ", process time: " + str(proc_time)
+                    str(mu1) + ", mu2: " + str(mu2) + ", mu3: " + str(mu3) + ", process time: " + \
+                    str(proc_time)
             f.writelines([explanatory_line + "\n", mse_data + "\n", psnr_data + "\n",
                           ssim_data + "\n", lpips_data + "\n"])
         mse_data =  "MSE: " + str(np.mean(mse_scores))
@@ -158,8 +160,8 @@ def mirflickr_dataset(data, n_files, n_iter, single_psf, save):
         ssim_data = "SSIM: " + str(np.mean(ssim_scores))
         lpips_data = "LPIPS: " + str(np.mean(lpips_scores))
         total_time = time.time() - start_total_time
-        f.writelines(["Total processing time: " + str(total_time) + "\n", "Mean scores:" + "\n", mse_data + "\n", psnr_data + "\n",
-                      ssim_data + "\n", lpips_data + "\n"])
+        f.writelines(["Total processing time: " + str(total_time) + "\n", "Mean scores:" + "\n",
+                      mse_data + "\n", psnr_data + "\n", ssim_data + "\n", lpips_data + "\n"])
 
     if save:
         print(f"\nReconstructions saved to : {save}")

@@ -177,9 +177,9 @@ def get_solver(data, mode, Gop, loss, lambda1=.005, huber_delta=1.5,  accelerati
     huberG = NonNegativeOrthant(dim=data.size)
 
     if mode == 'ridge':
-        solver = APGD(dim=data.size, F=ridgeF, G=None, verbose=None, acceleration=acceleration) 
+        solver = APGD(dim=data.size, F=ridgeF, G=None, verbose=None, acceleration=acceleration)
     elif mode == 'lasso':
-        solver = APGD(dim=data.size, F=lassoF, G=lassoG, verbose=None, acceleration=acceleration) 
+        solver = APGD(dim=data.size, F=lassoF, G=lassoG, verbose=None, acceleration=acceleration)
     elif mode == 'nn':
         solver = APGD(dim=data.size, F=nnF, G=nnG, verbose=None, acceleration=acceleration)
     elif mode == 'dct':
@@ -228,7 +228,7 @@ class Recon():
         None.
 
         """
-        assert color 
+        assert color
         data = {'r': data[:,:,0], 'g': data[:,:,1], 'b': data[:,:,2]}
         psf = {'r': psf[:,:,0], 'g': psf[:,:,1], 'b': psf[:,:,2]}
 
