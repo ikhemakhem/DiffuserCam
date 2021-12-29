@@ -139,7 +139,7 @@ def get_solver(data, mode, Gop, loss, lambda1=.005, huber_delta=1.5,  accelerati
         Given mode does not correspond to an implemented reconstruction method.
     Returns
     -------
-    REMAINS TO BE ADDED
+    An APGD or PDS object ready to solve the input linear inverse problem
 
     """
     apdg_modes = ['ridge', 'lasso', 'nn', 'dct', 'huber']
@@ -205,9 +205,9 @@ class Recon():
     """
     The class can be used for linear inverse image reconstructions. The class supports various
     modes. The approach of the linear inverse image reconstruction is via a point spread function
-    (PSF). Images can be reconstructed both in the RGB channels and in grayscale.
+    (PSF). Excpects an RGB image as input.
     """
-    def __init__(self, data, psf, mode, lambda1=.005, huber_delta=1.5, color=True):
+    def __init__(self, data, psf, mode, lambda1=.005, huber_delta=1.5):
         """
         Parameters
         ----------
@@ -221,14 +221,13 @@ class Recon():
             Hyperparameter in various reconstruction methods.
         huber_delta : float, optional
             Hyperparameter in the reconstruction method using the Huber norm.
-        color : bool, optional
-            If true, the reconstruction is in RGB. If false, reconstruction is in grayscale.
+    
         Returns
         -------
         None.
 
         """
-        assert color
+
         data = {'r': data[:,:,0], 'g': data[:,:,1], 'b': data[:,:,2]}
         psf = {'r': psf[:,:,0], 'g': psf[:,:,1], 'b': psf[:,:,2]}
 
@@ -246,7 +245,7 @@ class Recon():
         Returns
         -------
         out : list
-            REMAINS TO BE ADDED
+            output of the solver for each channel of the image in order [r, g, b]
         """
         out = []
         for key in self.solver:
@@ -262,7 +261,7 @@ class Recon():
         Returns
         -------
         to_return : np.ndarray
-            REMAINS TO BE ADDED
+            The reconstructed image
         """
         estimate = np.array([self.solver[key].get_estimate() for key in self.solver])
         to_return = np.empty((estimate.shape[1], estimate.shape[2], estimate.shape[0]))
