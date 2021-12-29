@@ -6,6 +6,7 @@ from scipy.fft import ifftshift, irfft2, rfft2
 
 
 class pylopsFastConvolve2D(LinearOperator):
+    "Class that implements a fast convolution operator in 2D and its adjoint"
     def __init__(self, N, h, dims, dtype='float64'):
         """
         Parameters

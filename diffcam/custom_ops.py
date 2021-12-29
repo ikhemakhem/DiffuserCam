@@ -133,7 +133,7 @@ class HuberNorm(DifferentiableFunctional):
         Parameters
         ----------
         x : np.ndarray
-            REMAINS TO BE ADDED
+            The value for which we calculate the Jacobian tranpose.
 
         Returns
         -------
@@ -148,5 +148,5 @@ class HuberNorm(DifferentiableFunctional):
             elif x[i] > self.delta:
                 grad[i] = self.delta
             else:
-                grad[i] = self.delta
+                grad[i] = -self.delta
         return grad
