@@ -54,8 +54,8 @@ def mirflickr_dataset(data, n_files, single_psf, save):
     images.
     Parameters
     ----------
-    data : np.ndarray
-        Raw data measured.
+    data : str
+        File path to raw data measured.
     n_files : int
         Number of files of raw data to reconstruct. Equals the number of performed reconstructions.
     single_psf : bool
